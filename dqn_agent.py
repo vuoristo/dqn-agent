@@ -2,6 +2,7 @@ import gym
 import tensorflow as tf
 import numpy as np
 import random
+from collections import deque
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
@@ -119,6 +120,8 @@ class DQNAgent(object):
     self.n_actions = env.action_space.n
     self.model = model
     self.experiences = []
+    self.eps = EPSILON
+    self.step_log = deque(100*[0], 100)
 
   def train(self):
     for ep in range(MAX_EPISODES):
@@ -131,6 +134,7 @@ class DQNAgent(object):
         self.save_and_train(ob0, action, reward, ob1)
         if done:
           self.report(step, ep)
+          self.eps *= EPSILON_DECAY
           break
 
         ob0 = ob1
@@ -138,11 +142,13 @@ class DQNAgent(object):
 
   def act(self, observation):
     observation = np.reshape(observation, [-1,4])
-    if np.random.uniform(0,1) < EPSILON:
-      return np.random.randint(self.n_actions)
+    if np.random.uniform(0,1) < self.eps:
+      action = np.random.randint(self.n_actions)
     else:
       q = self.model.infer_online_q(observation)
-      return np.argmax(q)
+      action = np.argmax(q)
+
+    return action
 
   def save_and_train(self, ob0, ac, re, ob1):
     self.experiences.append((ob0, ac, re, ob1))
@@ -160,7 +166,8 @@ class DQNAgent(object):
     self.model.train_net(mini_batch)
 
   def report(self, steps, ep):
-    print('Episode: {} steps: {}'.format(ep, steps))
+    self.step_log.append(steps)
+    print('Episode: {} steps: {}, mean-100: {}'.format(ep, steps, np.mean(self.step_log)))
 
 ENV_NAME = 'CartPole-v0'
 def main():
