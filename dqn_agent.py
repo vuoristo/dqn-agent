@@ -12,17 +12,17 @@ def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-HIDDEN_1 = 16
-HIDDEN_2 = 16
-INITIAL_LEARNING_RATE = 0.1
-LEARNING_RATE_DECAY_FACTOR = 0.96
-NUM_STEPS_PER_DECAY = 1000
-GAMMA = 0.99
-TAU = 0.1
 class SimpleDQNModel(object):
-  def __init__(self, env):
+  def __init__(self, env, hidden_1=16, hidden_2=16,
+               initial_learning_rate=0.1, learning_rate_decay_factor=0.96,
+               num_steps_per_decay=1000, gamma=0.99, tau=0.1):
     self.input_size = env.observation_space.shape[0]
     self.action_size = env.action_space.n
+    self.hidden_1 = hidden_1
+    self.hidden_2 = hidden_2
+    self.gamma = gamma
+    self.tau = tau
+
     self.experience_record = []
     self.inputs = tf.placeholder(tf.float32, shape=[None, self.input_size], name='inputs')
     self.targets = tf.placeholder(tf.float32, shape=[None, self.action_size], name='targets')
@@ -30,18 +30,18 @@ class SimpleDQNModel(object):
     self.online_model = self.build_net()
     self.target_model = self.build_net()
 
-    self.soft_updates = self.get_soft_updates()
+    self.target_updates = self.get_soft_updates()
 
     self.online_outputs = self.online_model['outputs']
     self.target_outputs = self.target_model['outputs']
     self.loss = tf.reduce_mean(tf.pow(self.online_outputs - self.targets, 2))
 
     self.global_step = tf.Variable(0, trainable=False)
-    self.lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
-                                        self.global_step,
-                                        NUM_STEPS_PER_DECAY,
-                                        LEARNING_RATE_DECAY_FACTOR,
-                                        staircase=True)
+    self.lr = tf.train.exponential_decay(initial_learning_rate,
+                                         self.global_step,
+                                         num_steps_per_decay,
+                                         learning_rate_decay_factor,
+                                         staircase=True)
     self.optimizer = tf.train.GradientDescentOptimizer(self.lr)
     self.train = self.optimizer.minimize(self.loss, global_step=self.global_step)
     init = tf.initialize_all_variables()
@@ -50,15 +50,15 @@ class SimpleDQNModel(object):
     self.sess.run(init)
 
   def build_net(self):
-    W_fc1 = weight_variable([self.input_size, HIDDEN_1])
-    b_fc1 = bias_variable([HIDDEN_1])
+    W_fc1 = weight_variable([self.input_size, self.hidden_1])
+    b_fc1 = bias_variable([self.hidden_1])
     h_fc1 = tf.nn.relu(tf.matmul(self.inputs, W_fc1) + b_fc1)
 
-    W_fc2 = weight_variable([HIDDEN_1, HIDDEN_2])
-    b_fc2 = bias_variable([HIDDEN_2])
+    W_fc2 = weight_variable([self.hidden_1, self.hidden_2])
+    b_fc2 = bias_variable([self.hidden_2])
     h_fc2 = tf.nn.relu(tf.matmul(h_fc1, W_fc2) + b_fc2)
 
-    W_outputs = weight_variable([HIDDEN_2, self.action_size])
+    W_outputs = weight_variable([self.hidden_2, self.action_size])
     b_outputs = bias_variable([self.action_size])
     outputs = tf.matmul(h_fc2, W_outputs) + b_outputs
 
@@ -87,13 +87,13 @@ class SimpleDQNModel(object):
     for key, value in self.online_model.items():
       if key is not 'outputs':
         W = self.target_model.get(key)
-        update = W.assign(TAU * value + (1. - TAU) * W)
+        update = W.assign(self.tau * value + (1. - self.tau) * W)
         updates.append(update)
 
     return updates
 
-  def do_soft_updates(self):
-    self.sess.run(self.soft_updates)
+  def do_target_updates(self):
+    self.sess.run(self.target_updates)
 
   def train_net(self, batch):
     ob0s, acs, res, ob1s = zip(*batch)
@@ -111,46 +111,48 @@ class SimpleDQNModel(object):
       if re == 0:
         tgt[ac] = 0
       else:
-        tgt[ac] = re + GAMMA * q_t1
+        tgt[ac] = re + self.gamma * q_t1
 
     loss, _ = self.sess.run([self.loss, self.train], feed_dict={
         self.inputs:ob0s,
         self.targets:tgt_qs})
-    self.do_soft_updates()
 
-MAX_EPISODES = 100000
-MAX_STEPS = 1000000
-EXP_BUFFER_SIZE = 40000
-EPSILON = 0.99
-EPSILON_DECAY = 0.99
-MIN_EPSILON = 0.01
-BATCH_SIZE = 50
+    self.do_target_updates()
+
 class DQNAgent(object):
-  def __init__(self, env, model):
-    self.env = env
+  def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
+               exp_buffer_size=40000, epsilon=0.99, epsilon_decay=0.99,
+               min_epsilon=0.01, batch_size=50):
     self.n_actions = env.action_space.n
     observation_shape = env.observation_space.shape
     assert np.ndim(observation_shape) == 1, 'Multidimensional input not supported'
     self.ob_size = observation_shape[0]
+    self.max_episodes = max_episodes
+    self.max_steps = max_steps
+    self.batch_size = batch_size
+    self.exp_buffer_size = exp_buffer_size
+    self.eps = epsilon
+    self.min_epsilon = min_epsilon
+    self.epsilon_decay = epsilon_decay
 
-    self.model = model
-    self.experiences = []
-    self.eps = EPSILON
     self.step_log = deque(100*[0], 100)
+    self.experiences = []
+    self.model = model
+    self.env = env
 
   def train(self):
-    for ep in range(MAX_EPISODES):
+    for ep in range(self.max_episodes):
       ob0 = self.env.reset()
       step = 0
-      while step < MAX_STEPS:
+      while step < self.max_steps:
         action = self.act(ob0)
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
         self.save_and_train(ob0, action, reward, ob1)
         if done:
           self.report(step, ep)
-          if self.eps > MIN_EPSILON:
-            self.eps *= EPSILON_DECAY
+          if self.eps > self.min_epsilon:
+            self.eps *= self.epsilon_decay
           break
 
         ob0 = ob1
@@ -168,15 +170,15 @@ class DQNAgent(object):
 
   def save_and_train(self, ob0, ac, re, ob1):
     self.experiences.append((ob0, ac, re, ob1))
-    if len(self.experiences) < BATCH_SIZE:
+    if len(self.experiences) < self.batch_size:
       batch_size = len(self.experiences)
     else:
-      batch_size = BATCH_SIZE
+      batch_size = self.batch_size
 
     mini_batch = random.sample(self.experiences, batch_size)
     mini_batch.append(self.experiences[-1])
 
-    if len(self.experiences) > EXP_BUFFER_SIZE:
+    if len(self.experiences) > self.exp_buffer_size:
       self.experiences.pop(0)
 
     self.model.train_net(mini_batch)
