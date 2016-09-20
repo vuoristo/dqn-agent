@@ -18,6 +18,7 @@ INITIAL_LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY_FACTOR = 0.96
 NUM_STEPS_PER_DECAY = 1000
 GAMMA = 0.9
+TAU = 0.1
 class SimpleDQNModel(object):
   def __init__(self, env):
     input_size = env.observation_space.shape[0]
@@ -86,7 +87,7 @@ class SimpleDQNModel(object):
     for key, value in self.online_model.items():
       if key is not 'outputs':
         W = self.target_model.get(key)
-        update = W.assign(0.01 * value + 0.99 * W)
+        update = W.assign(TAU * value + (1. - TAU) * W)
         updates.append(update)
 
     return updates
