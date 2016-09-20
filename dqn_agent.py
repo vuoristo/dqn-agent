@@ -96,12 +96,13 @@ class SimpleDQNModel(object):
     # hack for zeroing gradients from Keras-rl
     tgt_qs = self.infer_online_q(ob0s)
 
-    q_t1s = np.max(self.infer_target_q(ob1s))
-    q_t1s = np.reshape(q_t1s, [-1, 1])
+    q_t1s = np.max(self.infer_target_q(ob1s), axis=1)
 
-    #import pdb; pdb.set_trace()
     for tgt, ac, re, q_t1 in zip(tgt_qs, acs, res, q_t1s):
-      tgt[ac] = re + GAMMA * q_t1
+      if re == 0:
+        tgt[ac] = 0
+      else:
+        tgt[ac] = re + GAMMA * q_t1
 
     self.sess.run(self.train, feed_dict={
         self.inputs:ob0s,
