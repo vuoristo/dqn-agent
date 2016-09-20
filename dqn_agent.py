@@ -21,14 +21,14 @@ GAMMA = 0.99
 TAU = 0.1
 class SimpleDQNModel(object):
   def __init__(self, env):
-    input_size = env.observation_space.shape[0]
-    action_size = env.action_space.n
+    self.input_size = env.observation_space.shape[0]
+    self.action_size = env.action_space.n
     self.experience_record = []
-    self.inputs = tf.placeholder(tf.float32, shape=[None, input_size], name='inputs')
-    self.targets = tf.placeholder(tf.float32, shape=[None, action_size], name='targets')
+    self.inputs = tf.placeholder(tf.float32, shape=[None, self.input_size], name='inputs')
+    self.targets = tf.placeholder(tf.float32, shape=[None, self.action_size], name='targets')
 
-    self.online_model = self.build_net(input_size, action_size)
-    self.target_model = self.build_net(input_size, action_size)
+    self.online_model = self.build_net()
+    self.target_model = self.build_net()
 
     self.soft_updates = self.get_soft_updates()
 
@@ -49,8 +49,8 @@ class SimpleDQNModel(object):
     self.sess = tf.Session()
     self.sess.run(init)
 
-  def build_net(self, input_size, action_size):
-    W_fc1 = weight_variable([input_size, HIDDEN_1])
+  def build_net(self):
+    W_fc1 = weight_variable([self.input_size, HIDDEN_1])
     b_fc1 = bias_variable([HIDDEN_1])
     h_fc1 = tf.nn.relu(tf.matmul(self.inputs, W_fc1) + b_fc1)
 
@@ -58,8 +58,8 @@ class SimpleDQNModel(object):
     b_fc2 = bias_variable([HIDDEN_2])
     h_fc2 = tf.nn.relu(tf.matmul(h_fc1, W_fc2) + b_fc2)
 
-    W_outputs = weight_variable([HIDDEN_2, action_size])
-    b_outputs = bias_variable([action_size])
+    W_outputs = weight_variable([HIDDEN_2, self.action_size])
+    b_outputs = bias_variable([self.action_size])
     outputs = tf.matmul(h_fc2, W_outputs) + b_outputs
 
     net_dict = {
@@ -97,8 +97,8 @@ class SimpleDQNModel(object):
 
   def train_net(self, batch):
     ob0s, acs, res, ob1s = zip(*batch)
-    ob0s = np.reshape(ob0s, [-1,4])
-    ob1s = np.reshape(ob1s, [-1,4])
+    ob0s = np.reshape(ob0s, [-1,self.input_size])
+    ob1s = np.reshape(ob1s, [-1,self.input_size])
     acs = np.reshape(acs, [-1])
     res = np.reshape(res, [-1])
 
@@ -129,6 +129,10 @@ class DQNAgent(object):
   def __init__(self, env, model):
     self.env = env
     self.n_actions = env.action_space.n
+    observation_shape = env.observation_space.shape
+    assert np.ndim(observation_shape) == 1, 'Multidimensional input not supported'
+    self.ob_size = observation_shape[0]
+
     self.model = model
     self.experiences = []
     self.eps = EPSILON
@@ -153,7 +157,7 @@ class DQNAgent(object):
         step += 1
 
   def act(self, observation):
-    observation = np.reshape(observation, [-1,4])
+    observation = np.reshape(observation, [-1,self.ob_size])
     if np.random.uniform(0,1) < self.eps:
       action = np.random.randint(self.n_actions)
     else:
