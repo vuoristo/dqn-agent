@@ -13,15 +13,16 @@ def bias_variable(shape):
   return tf.Variable(initial)
 
 class SimpleDQNModel(object):
-  def __init__(self, env, hidden_1=16, hidden_2=16,
-               initial_learning_rate=0.1, learning_rate_decay_factor=0.96,
-               num_steps_per_decay=1000, gamma=0.99, tau=0.1):
+  def __init__(self, env, hidden_1=16, hidden_2=16, initial_learning_rate=0.1,
+               learning_rate_decay_factor=0.96, num_steps_per_decay=1000,
+               gamma=0.99, tau=0.1, soft_updates=False):
     self.input_size = env.observation_space.shape[0]
     self.action_size = env.action_space.n
     self.hidden_1 = hidden_1
     self.hidden_2 = hidden_2
     self.gamma = gamma
     self.tau = tau
+    self.soft_updates = False
 
     self.experience_record = []
     self.inputs = tf.placeholder(tf.float32, shape=[None, self.input_size], name='inputs')
@@ -30,7 +31,10 @@ class SimpleDQNModel(object):
     self.online_model = self.build_net()
     self.target_model = self.build_net()
 
-    self.target_updates = self.get_soft_updates()
+    if self.soft_updates:
+      self.target_updates = self.get_soft_updates()
+    else:
+      self.target_updates = self.get_hard_updates()
 
     self.online_outputs = self.online_model['outputs']
     self.target_outputs = self.target_model['outputs']
@@ -82,6 +86,16 @@ class SimpleDQNModel(object):
     q = self.sess.run(self.target_outputs, feed_dict={self.inputs:observation})
     return q
 
+  def get_hard_updates(self):
+    updates = []
+    for key, value in self.online_model.items():
+      if key is not 'outputs':
+        W = self.target_model.get(key)
+        update = W.assign(value)
+        updates.append(update)
+
+    return updates
+
   def get_soft_updates(self):
     updates = []
     for key, value in self.online_model.items():
@@ -117,7 +131,12 @@ class SimpleDQNModel(object):
         self.inputs:ob0s,
         self.targets:tgt_qs})
 
-    self.do_target_updates()
+    if self.soft_updates:
+      self.do_target_updates()
+
+  def post_episode(self):
+    if not self.soft_updates:
+      self.do_target_updates()
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
@@ -151,6 +170,7 @@ class DQNAgent(object):
         self.save_and_train(ob0, action, reward, ob1)
         if done:
           self.report(step, ep)
+          self.model.post_episode()
           if self.eps > self.min_epsilon:
             self.eps *= self.epsilon_decay
           break
