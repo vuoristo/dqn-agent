@@ -37,7 +37,7 @@ class SimpleDQNModel(object):
     self.hidden_2 = hidden_2
     self.gamma = gamma
     self.tau = tau
-    self.soft_updates = False
+    self.soft_updates = soft_updates
 
     self.experience_record = []
     self.inputs = tf.placeholder(
