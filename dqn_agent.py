@@ -14,7 +14,9 @@ def bias_variable(shape):
 
 HIDDEN_1 = 16
 HIDDEN_2 = 16
-LEARNING_RATE = 1e-4
+INITIAL_LEARNING_RATE = 0.1
+LEARNING_RATE_DECAY_FACTOR = 0.96
+NUM_STEPS_PER_DECAY = 1000
 GAMMA = 0.9
 class SimpleDQNModel(object):
   def __init__(self, env):
@@ -33,8 +35,14 @@ class SimpleDQNModel(object):
     self.target_outputs = self.target_model['outputs']
     self.loss = tf.reduce_mean(tf.pow(self.online_outputs - self.targets, 2))
 
-    self.optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-    self.train = self.optimizer.minimize(self.loss)
+    self.global_step = tf.Variable(0, trainable=False)
+    self.lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
+                                        self.global_step,
+                                        NUM_STEPS_PER_DECAY,
+                                        LEARNING_RATE_DECAY_FACTOR,
+                                        staircase=True)
+    self.optimizer = tf.train.GradientDescentOptimizer(self.lr)
+    self.train = self.optimizer.minimize(self.loss, global_step=self.global_step)
     init = tf.initialize_all_variables()
 
     self.sess = tf.Session()
@@ -104,17 +112,17 @@ class SimpleDQNModel(object):
       else:
         tgt[ac] = re + GAMMA * q_t1
 
-    self.sess.run(self.train, feed_dict={
+    loss, _ = self.sess.run([self.loss, self.train], feed_dict={
         self.inputs:ob0s,
         self.targets:tgt_qs})
     self.do_soft_updates()
 
-MAX_EPISODES = 10000
+MAX_EPISODES = 100000
 MAX_STEPS = 10000
 EXP_BUFFER_SIZE = 10000
 EPSILON = 0.99
-EPSILON_DECAY = 0.99
-BATCH_SIZE = 30
+EPSILON_DECAY = 0.98
+BATCH_SIZE = 50
 class DQNAgent(object):
   def __init__(self, env, model):
     self.env = env
