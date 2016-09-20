@@ -17,7 +17,7 @@ HIDDEN_2 = 16
 INITIAL_LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY_FACTOR = 0.96
 NUM_STEPS_PER_DECAY = 1000
-GAMMA = 0.9
+GAMMA = 0.99
 TAU = 0.1
 class SimpleDQNModel(object):
   def __init__(self, env):
@@ -119,10 +119,11 @@ class SimpleDQNModel(object):
     self.do_soft_updates()
 
 MAX_EPISODES = 100000
-MAX_STEPS = 10000
-EXP_BUFFER_SIZE = 10000
+MAX_STEPS = 1000000
+EXP_BUFFER_SIZE = 40000
 EPSILON = 0.99
-EPSILON_DECAY = 0.98
+EPSILON_DECAY = 0.99
+MIN_EPSILON = 0.01
 BATCH_SIZE = 50
 class DQNAgent(object):
   def __init__(self, env, model):
@@ -144,7 +145,8 @@ class DQNAgent(object):
         self.save_and_train(ob0, action, reward, ob1)
         if done:
           self.report(step, ep)
-          self.eps *= EPSILON_DECAY
+          if self.eps > MIN_EPSILON:
+            self.eps *= EPSILON_DECAY
           break
 
         ob0 = ob1
