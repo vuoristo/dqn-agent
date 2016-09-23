@@ -25,9 +25,6 @@ class DQNAgent(object):
     """
     self.n_actions = env.action_space.n
     observation_shape = env.observation_space.shape
-    assert np.ndim(observation_shape) == 1, \
-        'Multidimensional input not supported'
-    self.ob_size = observation_shape[0]
     self.max_episodes = max_episodes
     self.max_steps = max_steps
     self.batch_size = batch_size
@@ -63,7 +60,6 @@ class DQNAgent(object):
 
   def select_action(self, observation):
     """Selects action for given observation."""
-    observation = np.reshape(observation, [-1,self.ob_size])
     if np.random.uniform(0,1) < self.eps:
       action = np.random.randint(self.n_actions)
     else:
