@@ -5,8 +5,8 @@ from collections import deque
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
-               exp_buffer_size=40000, epsilon=0.99, epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=50):
+               exp_buffer_size=10000, epsilon=0.5, epsilon_decay=0.99,
+               min_epsilon=0.01, batch_size=10):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
