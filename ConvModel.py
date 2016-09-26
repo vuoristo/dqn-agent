@@ -17,12 +17,6 @@ def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
 
 class ConvModel(DQNModel):
-  def __init__(
-      self, env, initial_learning_rate=0.1,
-      learning_rate_decay_factor=0.96, num_steps_per_decay=1000,
-      gamma=0.99, tau=0.01, soft_updates=False):
-    super(ConvModel, self).__init__(env)
-
   def build_net(self, x):
     """Builds a two layer neural network. Returns a dictionary
     containing weight variables and outputs.

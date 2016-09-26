@@ -8,16 +8,19 @@ class DQNModel(object):
   def __init__(
       self, env, initial_learning_rate=0.001,
       learning_rate_decay_factor=0.96, num_steps_per_decay=1000,
-      gamma=0.99, tau=0.01, soft_updates=False):
+      gamma=0.99, tau=0.01, soft_updates=True):
     """
+    arguments:
+    env -- OpenAI gym environment
+
     keyword arguments:
-    initial_learning_rate -- for gradient descent. default 0.1
+    initial_learning_rate -- for gradient descent. default 0.001
     learning_rate_decay_factor -- for gradient descent. default 0.96
     num_steps_per_decay -- decay schedule for gradient descent.
                            default 1000
     gamma -- Q-learning gamma. default 0.99
     tau -- Soft target update rate. default 0.01
-    soft_updates -- soft target updates. default False
+    soft_updates -- soft target updates. default True
     """
 
     self.input_shape = env.observation_space.shape
