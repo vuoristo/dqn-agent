@@ -2,6 +2,9 @@ from DQNModel import DQNModel
 import numpy as np
 import tensorflow as tf
 
+from PIL import Image
+
+
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.001)
   return tf.Variable(initial)
@@ -22,13 +25,10 @@ class ConvModel(DQNModel):
     containing weight variables and outputs.
     """
 
-    W_conv1 = weight_variable([5,5,3,32])
+    W_conv1 = weight_variable([5,5,12,32])
     b_conv1 = bias_variable([32])
 
-    x_image = tf.image.resize_images(x, 56, 56,
-        method=0, align_corners=False)
-
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
     h_pool1 = max_pool_2x2(h_conv1)
 
     W_conv2 = weight_variable([5,5,32,64])
@@ -37,10 +37,10 @@ class ConvModel(DQNModel):
     h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
     h_pool2 = max_pool_2x2(h_conv2)
 
-    W_fc1 = weight_variable([14 * 14 * 64, 1024])
+    W_fc1 = weight_variable([21*21*64, 1024])
     b_fc1 = bias_variable([1024])
 
-    h_pool2_flat = tf.reshape(h_pool2, [-1, 14*14*64])
+    h_pool2_flat = tf.reshape(h_pool2, [-1, 21*21*64])
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
     W_fc2 = weight_variable([1024, self.num_actions])
@@ -69,13 +69,16 @@ class ConvModel(DQNModel):
       self.input_shape[1], self.input_shape[2]])
 
   def infer_online_q(self, observation):
-    observation = self.reshape_input(observation)
     q = self.sess.run(self.online_model['outputs'], feed_dict={
       self.inputs:observation})
     return q
 
   def infer_target_q(self, observation):
-    observation = self.reshape_input(observation)
     q = self.sess.run(self.target_model['outputs'], feed_dict={
       self.inputs:observation})
     return q
+
+  def reshape_observation(self, observation):
+    img = Image.fromarray(observation)
+    img = img.resize(self.resize_shape)
+    return np.array(img)

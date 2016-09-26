@@ -6,7 +6,7 @@ from collections import deque
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
                exp_buffer_size=10000, epsilon=0.5, epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=10):
+               min_epsilon=0.01, batch_size=10, window_length=4):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -22,9 +22,10 @@ class DQNAgent(object):
     epsilon_decay -- exponential decay factor for epsilon. default 0.99
     min_epsilon -- minimum epsilon value. default 0.01
     batch_size -- number of elements in minibatch. default 50
+    window_length -- number of consecutive elements to
+                      sample for minibatch. default 1
     """
     self.n_actions = env.action_space.n
-    observation_shape = env.observation_space.shape
     self.max_episodes = max_episodes
     self.max_steps = max_steps
     self.batch_size = batch_size
@@ -35,6 +36,7 @@ class DQNAgent(object):
 
     self.step_log = deque(100*[0], 100)
     self.experiences = []
+    self.window_length = window_length
     self.model = model
     self.env = env
 
@@ -44,10 +46,11 @@ class DQNAgent(object):
       ob0 = self.env.reset()
       step = 0
       while step < self.max_steps:
-        action = self.select_action(ob0)
+        action = self.select_action()
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
-        self.save_and_train(ob0, action, reward, ob1)
+        self.save_and_train(ob0, action, reward, ob1, done)
+        self.env.render()
         if done:
           self.report(step, ep)
           self.model.post_episode()
@@ -58,28 +61,76 @@ class DQNAgent(object):
         ob0 = ob1
         step += 1
 
-  def select_action(self, observation):
+  def get_exp_window(self, index):
+    end = index + 1
+    start = end - self.window_length
+    start = start if start >= 0 else 0
+    sub_batch = self.experiences[start:end]
+    while len(sub_batch) < self.window_length:
+      sub_batch = [sub_batch[0]] + sub_batch
+
+    # TODO deal with this dict situation
+    window = {
+      'ob0':[],
+      'ac':[],
+      're':[],
+      'ob1':[],
+      'done':[],
+    }
+    for exp in sub_batch:
+      for key, value in exp.items():
+        window[key] += [value]
+
+    return window
+
+  def select_action(self):
     """Selects action for given observation."""
-    if np.random.uniform(0,1) < self.eps:
+    if len(self.experiences) == 0 or \
+        np.random.uniform(0,1) < self.eps:
       action = np.random.randint(self.n_actions)
     else:
-      q = self.model.infer_online_q(observation)
+      exp = self.get_exp_window(len(self.experiences))
+      q = self.model.get_q_value(exp)
       action = np.argmax(q)
 
     return action
 
-  def save_and_train(self, ob0, ac, re, ob1):
+  def sample_random_consecutive_batches(self):
+    ends = np.random.randint(
+        len(self.experiences), size=self.batch_size)
+    # always use the latest experience
+    ends = np.append(ends, len(self.experiences) - 1)
+    # TODO deal with this dict situation
+    batch = {
+      'ob0':[],
+      'ac':[],
+      're':[],
+      'ob1':[],
+      'done':[],
+    }
+    for index in ends:
+      sub_batch = self.get_exp_window(index)
+      for key, value in sub_batch.items():
+        batch[key] += value
+
+    return batch
+
+  def save_and_train(self, ob0, ac, re, ob1, done):
     """Saves experience, samples a batch of past experiences
     and runs one training step of the model.
     """
-    self.experiences.append((ob0, ac, re, ob1))
-    if len(self.experiences) < self.batch_size:
-      batch_size = len(self.experiences)
-    else:
-      batch_size = self.batch_size
-
-    mini_batch = random.sample(self.experiences, batch_size)
-    mini_batch.append(self.experiences[-1])
+    ob0 = self.model.reshape_observation(ob0)
+    ob1 = self.model.reshape_observation(ob1)
+    # TODO deal with this dict situation
+    experience = {
+      'ob0':ob0,
+      'ac':ac,
+      're':re,
+      'ob1':ob1,
+      'done':done,
+    }
+    self.experiences.append(experience)
+    mini_batch = self.sample_random_consecutive_batches()
 
     if len(self.experiences) > self.exp_buffer_size:
       self.experiences.pop(0)

@@ -4,6 +4,7 @@ communication with DQNAgent.
 import tensorflow as tf
 import numpy as np
 
+RESIZE_SHAPE = (84, 84)
 class DQNModel(object):
   def __init__(
       self, env, initial_learning_rate=0.001,
@@ -23,14 +24,19 @@ class DQNModel(object):
     soft_updates -- soft target updates. default True
     """
 
-    self.input_shape = env.observation_space.shape
+    self.resize_shape = RESIZE_SHAPE
+    self.input_shape = list(env.observation_space.shape)
+    self.input_shape[0] = RESIZE_SHAPE[0]
+    self.input_shape[1] = RESIZE_SHAPE[1]
+    # TODO COLLECT window size to some reasonable flag
+    self.input_shape[2] *= 4
     self.num_actions = env.action_space.n
     self.gamma = gamma
     self.tau = tau
     self.soft_updates = soft_updates
 
     self.inputs = tf.placeholder(
-        tf.float32, shape=[None] + list((self.input_shape)), name='inputs')
+        tf.float32, shape=[None] + list(self.input_shape), name='inputs')
     self.targets = tf.placeholder(
         tf.float32, shape=[None, self.num_actions], name='targets')
 
@@ -96,11 +102,10 @@ class DQNModel(object):
     """Perform one step of gradient descent training on batch.
     Also update target model if soft updates are enabled.
     """
-    ob0s, acs, res, ob1s = zip(*batch)
-    ob0s = self.reshape_input(ob0s)
-    ob1s = self.reshape_input(ob1s)
-    acs = np.reshape(acs, [-1])
-    res = np.reshape(res, [-1])
+    ob0s = self.reshape_input(batch['ob0'])
+    ob1s = self.reshape_input(batch['ob1'])
+    acs = np.reshape(batch['ac'], [-1, 4])
+    res = np.reshape(batch['re'], [-1, 4])
 
     # hack for zeroing gradients from Keras-rl
     tgt_qs = self.infer_online_q(ob0s)
@@ -108,10 +113,10 @@ class DQNModel(object):
     q_t1s = np.max(self.infer_target_q(ob1s), axis=1)
 
     for tgt, ac, re, q_t1 in zip(tgt_qs, acs, res, q_t1s):
-      if re == 0:
+      if re[-1] == 0:
         tgt[ac] = 0
       else:
-        tgt[ac] = re + self.gamma * q_t1
+        tgt[ac] = re[-1] + self.gamma * q_t1
 
     loss, _ = self.sess.run([self.loss, self.train], feed_dict={
         self.inputs:ob0s,
@@ -119,6 +124,10 @@ class DQNModel(object):
 
     if self.soft_updates:
       self.do_target_updates()
+
+  def get_q_value(self, experience):
+    ob1s = self.reshape_input(experience['ob1'])
+    return self.infer_online_q(ob1s)
 
   def post_episode(self):
     """Perform once per episode tasks here. Currently only hard updates.
