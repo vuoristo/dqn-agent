@@ -20,6 +20,16 @@ def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
 
 class ConvModel(DQNModel):
+  def __init__(self, env, resize_shape=(84, 84),
+              window_size=4, **kwargs):
+    self.resize_shape = resize_shape
+    self.input_shape = list(env.observation_space.shape)
+    self.input_shape[0] = resize_shape[0]
+    self.input_shape[1] = resize_shape[1]
+    self.input_shape[2] *= window_size
+    self.window_size = window_size
+    super(ConvModel, self).__init__(env, **kwargs)
+
   def build_net(self, x):
     """Builds a two layer neural network. Returns a dictionary
     containing weight variables and outputs.

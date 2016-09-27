@@ -4,7 +4,6 @@ communication with DQNAgent.
 import tensorflow as tf
 import numpy as np
 
-RESIZE_SHAPE = (84, 84)
 class DQNModel(object):
   def __init__(
       self, env, initial_learning_rate=0.001,
@@ -24,12 +23,6 @@ class DQNModel(object):
     soft_updates -- soft target updates. default True
     """
 
-    self.resize_shape = RESIZE_SHAPE
-    self.input_shape = list(env.observation_space.shape)
-    self.input_shape[0] = RESIZE_SHAPE[0]
-    self.input_shape[1] = RESIZE_SHAPE[1]
-    # TODO COLLECT window size to some reasonable flag
-    self.input_shape[2] *= 4
     self.num_actions = env.action_space.n
     self.gamma = gamma
     self.tau = tau
