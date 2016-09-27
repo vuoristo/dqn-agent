@@ -3,6 +3,8 @@ import numpy as np
 import random
 from collections import deque
 
+EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
+
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
                exp_buffer_size=10000, epsilon=0.5, epsilon_decay=0.99,
@@ -69,14 +71,7 @@ class DQNAgent(object):
     while len(sub_batch) < self.window_length:
       sub_batch = [sub_batch[0]] + sub_batch
 
-    # TODO deal with this dict situation
-    window = {
-      'ob0':[],
-      'ac':[],
-      're':[],
-      'ob1':[],
-      'done':[],
-    }
+    window = {k: [] for k in EXPERIENCE_COLS}
     for exp in sub_batch:
       for key, value in exp.items():
         window[key] += [value]
@@ -100,14 +95,8 @@ class DQNAgent(object):
         len(self.experiences), size=self.batch_size)
     # always use the latest experience
     ends = np.append(ends, len(self.experiences) - 1)
-    # TODO deal with this dict situation
-    batch = {
-      'ob0':[],
-      'ac':[],
-      're':[],
-      'ob1':[],
-      'done':[],
-    }
+
+    batch = {k: [] for k in EXPERIENCE_COLS}
     for index in ends:
       sub_batch = self.get_exp_window(index)
       for key, value in sub_batch.items():
@@ -121,7 +110,6 @@ class DQNAgent(object):
     """
     ob0 = self.model.reshape_observation(ob0)
     ob1 = self.model.reshape_observation(ob1)
-    # TODO deal with this dict situation
     experience = {
       'ob0':ob0,
       'ac':ac,
