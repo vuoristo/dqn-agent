@@ -97,8 +97,8 @@ class DQNModel(object):
     """
     ob0s = self.reshape_input(batch['ob0'])
     ob1s = self.reshape_input(batch['ob1'])
-    acs = np.reshape(batch['ac'], [-1, 4])
-    res = np.reshape(batch['re'], [-1, 4])
+    acs = np.reshape(batch['ac'], [-1, self.window_size])
+    res = np.reshape(batch['re'], [-1, self.window_size])
 
     # hack for zeroing gradients from Keras-rl
     tgt_qs = self.infer_online_q(ob0s)
