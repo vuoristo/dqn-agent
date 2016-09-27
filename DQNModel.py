@@ -28,18 +28,32 @@ class DQNModel(object):
     self.tau = tau
     self.soft_updates = soft_updates
 
-    self.inputs = tf.placeholder(
-        tf.float32, shape=[None] + list(self.input_shape), name='inputs')
-    self.targets = tf.placeholder(
-        tf.float32, shape=[None, self.num_actions], name='targets')
+    self.input_ob0s = tf.placeholder(
+        tf.float32, shape=[None] + list(self.input_shape), name='ob0s')
+    self.input_ob1s = tf.placeholder(
+        tf.float32, shape=[None] + list(self.input_shape), name='ob1s')
+    self.actions = tf.placeholder(
+        tf.int32, shape=[None, self.window_size], name='action')
+    self.rewards = tf.placeholder(
+        tf.float32, shape=[None, self.window_size], name='rewards')
+    self.rewards_mask = tf.placeholder(
+        tf.float32, shape=[None, self.window_size], name='rewards_mask')
 
-    # Build two identical models, one for online inference
-    # the other for training targets
-    self.online_model = self.build_net(self.inputs)
-    self.target_model = self.build_net(self.inputs)
+    self.online_model = self.build_net(self.input_ob0s)
+    self.target_model = self.build_net(self.input_ob1s)
+
+    online_qs = self.online_model['outputs']
+    target_qs = self.target_model['outputs']
+    actions_mask = tf.one_hot(self.actions, self.num_actions,
+                              name='actions_mask')
+
+    masked_online_qs = online_qs - actions_mask * online_qs
+    train_targets = self.rewards_mask * (
+        gamma * actions_mask * target_qs + self.rewards
+        ) + masked_online_qs
 
     self.loss = tf.reduce_mean(
-        tf.pow(self.online_model['outputs'] - self.targets, 2))
+        tf.pow(online_qs - train_targets, 2))
 
     self.global_step = tf.Variable(0, trainable=False)
     self.lr = tf.train.exponential_decay(initial_learning_rate,
@@ -99,21 +113,15 @@ class DQNModel(object):
     ob1s = self.reshape_input(batch['ob1'])
     acs = np.reshape(batch['ac'], [-1, self.window_size])
     res = np.reshape(batch['re'], [-1, self.window_size])
-
-    # hack for zeroing gradients from Keras-rl
-    tgt_qs = self.infer_online_q(ob0s)
-
-    q_t1s = np.max(self.infer_target_q(ob1s), axis=1)
-
-    for tgt, ac, re, q_t1 in zip(tgt_qs, acs, res, q_t1s):
-      if re[-1] == 0:
-        tgt[ac] = 0
-      else:
-        tgt[ac] = re[-1] + self.gamma * q_t1
+    rewards_mask = np.zeros_like(res)
+    rewards_mask[np.nonzero(res)] = 1.
 
     loss, _ = self.sess.run([self.loss, self.train], feed_dict={
-        self.inputs:ob0s,
-        self.targets:tgt_qs})
+        self.input_ob0s:ob0s,
+        self.input_ob1s:ob1s,
+        self.actions:acs,
+        self.rewards:res,
+        self.rewards_mask:rewards_mask})
 
     if self.soft_updates:
       self.do_target_updates()

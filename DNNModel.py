@@ -56,12 +56,12 @@ class DNNModel(DQNModel):
 
   def infer_online_q(self, observation):
     q = self.sess.run(self.online_model['outputs'], feed_dict={
-      self.inputs:observation})
+      self.input_ob0s:observation})
     return q
 
   def infer_target_q(self, observation):
     q = self.sess.run(self.target_model['outputs'], feed_dict={
-      self.inputs:observation})
+      self.input_ob1s:observation})
     return q
 
   def reshape_observation(self, observation):
