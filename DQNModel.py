@@ -33,11 +33,11 @@ class DQNModel(object):
     self.input_ob1s = tf.placeholder(
         tf.float32, shape=[None] + list(self.input_shape), name='ob1s')
     self.actions = tf.placeholder(
-        tf.int32, shape=[None, self.window_size], name='action')
+        tf.int32, shape=[None, 1], name='action')
     self.rewards = tf.placeholder(
-        tf.float32, shape=[None, self.window_size], name='rewards')
+        tf.float32, shape=[None, 1], name='rewards')
     self.rewards_mask = tf.placeholder(
-        tf.float32, shape=[None, self.window_size], name='rewards_mask')
+        tf.float32, shape=[None, 1], name='rewards_mask')
 
     self.online_model = self.build_net(self.input_ob0s)
     self.target_model = self.build_net(self.input_ob1s)
@@ -111,8 +111,13 @@ class DQNModel(object):
     """
     ob0s = self.reshape_input(batch['ob0'])
     ob1s = self.reshape_input(batch['ob1'])
+
     acs = np.reshape(batch['ac'], [-1, self.window_size])
     res = np.reshape(batch['re'], [-1, self.window_size])
+    # Only the last actions and rewards of batch are used for training
+    acs = np.reshape(acs[:,-1], [-1,1])
+    res = np.reshape(res[:,-1], [-1,1])
+
     rewards_mask = np.zeros_like(res)
     rewards_mask[np.nonzero(res)] = 1.
 
