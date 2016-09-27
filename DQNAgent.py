@@ -7,8 +7,8 @@ EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
-               exp_buffer_size=10000, epsilon=0.5, epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=10, window_length=4):
+               exp_buffer_size=10000, epsilon=0.9, epsilon_decay=0.99,
+               min_epsilon=0.01, batch_size=20):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -24,8 +24,6 @@ class DQNAgent(object):
     epsilon_decay -- exponential decay factor for epsilon. default 0.99
     min_epsilon -- minimum epsilon value. default 0.01
     batch_size -- number of elements in minibatch. default 50
-    window_length -- number of consecutive elements to
-                      sample for minibatch. default 1
     """
     self.n_actions = env.action_space.n
     self.max_episodes = max_episodes
@@ -38,7 +36,7 @@ class DQNAgent(object):
 
     self.step_log = deque(100*[0], 100)
     self.experiences = []
-    self.window_length = window_length
+    self.window_size = model.window_size
     self.model = model
     self.env = env
 
@@ -64,11 +62,11 @@ class DQNAgent(object):
         step += 1
 
   def get_exp_window(self, index):
-    end = index + 1
-    start = end - self.window_length
+    end = index if index > 0 else 1
+    start = end - self.window_size
     start = start if start >= 0 else 0
     sub_batch = self.experiences[start:end]
-    while len(sub_batch) < self.window_length:
+    while len(sub_batch) < self.window_size:
       sub_batch = [sub_batch[0]] + sub_batch
 
     window = {k: [] for k in EXPERIENCE_COLS}
@@ -92,9 +90,9 @@ class DQNAgent(object):
 
   def sample_random_consecutive_batches(self):
     ends = np.random.randint(
-        len(self.experiences), size=self.batch_size)
+        len(self.experiences) + 1, size=self.batch_size)
     # always use the latest experience
-    ends = np.append(ends, len(self.experiences) - 1)
+    ends = np.append(ends, len(self.experiences))
 
     batch = {k: [] for k in EXPERIENCE_COLS}
     for index in ends:
