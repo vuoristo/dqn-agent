@@ -121,11 +121,16 @@ class DQNModel(object):
     ob0s = self.reshape_input(batch['ob0'])
     ob1s = self.reshape_input(batch['ob1'])
 
+    # Select the last actions and rewards of the window because only
+    # the last actions and rewards of batch are used for training.
     acs = np.reshape(batch['ac'], [-1, self.window_size])
     res = np.reshape(batch['re'], [-1, self.window_size])
-    # Only the last actions and rewards of batch are used for training
     acs = np.reshape(acs[:,-1], [-1,1])
     res = np.reshape(res[:,-1], [-1,1])
+
+    # Clip rewards to -1,0,1
+    out_res = np.zeros_like(res)
+    out_res[np.nonzero(res)] = 1. * np.sign(res[np.nonzero(res)])
 
     rewards_mask = np.zeros_like(res)
     rewards_mask[np.nonzero(res)] = 1.
@@ -134,7 +139,7 @@ class DQNModel(object):
         self.input_ob0s:ob0s,
         self.input_ob1s:ob1s,
         self.actions:acs,
-        self.rewards:res,
+        self.rewards:out_res,
         self.rewards_mask:rewards_mask})
 
     if self.soft_updates:
