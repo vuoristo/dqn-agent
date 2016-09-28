@@ -6,18 +6,15 @@ import numpy as np
 
 class DQNModel(object):
   def __init__(
-      self, env, initial_learning_rate=0.001,
-      learning_rate_decay_factor=0.96, num_steps_per_decay=1000,
-      gamma=0.99, tau=0.01, soft_updates=True):
+      self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
+      soft_updates=True):
     """
     arguments:
     env -- OpenAI gym environment
 
     keyword arguments:
-    initial_learning_rate -- for gradient descent. default 0.001
-    learning_rate_decay_factor -- for gradient descent. default 0.96
-    num_steps_per_decay -- decay schedule for gradient descent.
-                           default 1000
+    learning_rate -- RMSProp learning rate
+    momentum -- RMSProp momentum
     gamma -- Q-learning gamma. default 0.99
     tau -- Soft target update rate. default 0.01
     soft_updates -- soft target updates. default True
@@ -66,12 +63,7 @@ class DQNModel(object):
         tf.pow(online_qs - train_targets, 2))
 
     self.global_step = tf.Variable(0, trainable=False)
-    self.lr = tf.train.exponential_decay(initial_learning_rate,
-                                         self.global_step,
-                                         num_steps_per_decay,
-                                         learning_rate_decay_factor,
-                                         staircase=True)
-    self.optimizer = tf.train.GradientDescentOptimizer(self.lr)
+    self.optimizer = tf.train.RMSPropOptimizer(learning_rate, momentum=momentum)
     self.train = self.optimizer.minimize(
         self.loss, global_step=self.global_step)
 
