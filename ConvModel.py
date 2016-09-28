@@ -37,14 +37,14 @@ class ConvModel(DQNModel):
     """
     self.resize_shape = resize_shape
     self.crop_centering = crop_centering
-    self.input_shape = list(env.observation_space.shape)
-    self.input_shape[0] = resize_shape[0]
-    self.input_shape[1] = resize_shape[1]
-    self.input_shape[2] *= window_size
+    self.input_shape = [0,0,0]
+    self.input_shape[0] = 3 # dimension of color channel
+    self.input_shape[1] = resize_shape[0]
+    self.input_shape[2] = resize_shape[1]
 
     self.grayscale = grayscale
     if grayscale:
-      self.input_shape[2] = window_size
+      self.input_shape[0] = window_size
 
     self.window_size = window_size
     super(ConvModel, self).__init__(env, **kwargs)
@@ -55,10 +55,12 @@ class ConvModel(DQNModel):
     outputs.
     """
 
-    W_conv1 = weight_variable([8, 8, self.input_shape[2], 32])
+    x_input = tf.transpose(x,(0,2,3,1))
+
+    W_conv1 = weight_variable([8, 8, self.input_shape[0], 32])
     b_conv1 = bias_variable([32])
 
-    h_conv1 = tf.nn.relu(conv2d(x, W_conv1, [1,4,4,1]) + b_conv1)
+    h_conv1 = tf.nn.relu(conv2d(x_input, W_conv1, [1,4,4,1]) + b_conv1)
 
     W_conv2 = weight_variable([4,4,32,64])
     b_conv2 = bias_variable([64])
