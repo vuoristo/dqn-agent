@@ -20,9 +20,6 @@ def bias_variable(shape):
 def conv2d(x,W,strides):
   return tf.nn.conv2d(x,W,strides=strides, padding='SAME')
 
-def max_pool_2x2(x):
-  return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-
 class ConvModel(DQNModel):
   def __init__(self, env, resize_shape=(84, 84), crop_centering=(0.5,0.7),
               window_size=4, grayscale=True, **kwargs):
