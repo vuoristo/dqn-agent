@@ -8,7 +8,7 @@ EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
                exp_buffer_size=10000, epsilon=0.9, epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=20):
+               min_epsilon=0.01, batch_size=20, render=True):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -40,6 +40,8 @@ class DQNAgent(object):
     self.model = model
     self.env = env
 
+    self.render = render
+
   def train(self):
     """Steps environment and runs model training."""
     for ep in range(self.max_episodes):
@@ -50,7 +52,8 @@ class DQNAgent(object):
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
         self.save_and_train(ob0, action, reward, ob1, done)
-        self.env.render()
+        if self.render:
+          self.env.render()
         if done:
           self.report(step, ep)
           self.model.post_episode()
