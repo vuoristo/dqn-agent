@@ -7,7 +7,7 @@ from DQNModel import DQNModel
 import numpy as np
 import tensorflow as tf
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.001)
@@ -24,7 +24,7 @@ def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
 
 class ConvModel(DQNModel):
-  def __init__(self, env, resize_shape=(64, 64),
+  def __init__(self, env, resize_shape=(84, 84), crop_centering=(0.5,0.7),
               window_size=4, grayscale=True, **kwargs):
     """
     arguments:
@@ -32,12 +32,14 @@ class ConvModel(DQNModel):
 
     keyword arguments:
     resize_shape -- All input images are resized to this shape.
-                    default (64,64)
+                    default (84,84)
+    crop_centering -- Control the cropping position. Default (0.5,0.7)
     window_size -- Number of consecutive observations to feed to the
                    network
     grayscale -- Convert inputs to grayscale. default True
     """
     self.resize_shape = resize_shape
+    self.crop_centering = crop_centering
     self.input_shape = list(env.observation_space.shape)
     self.input_shape[0] = resize_shape[0]
     self.input_shape[1] = resize_shape[1]
@@ -112,8 +114,12 @@ class ConvModel(DQNModel):
     return q
 
   def reshape_observation(self, observation):
+    """ Crop non-square inputs to squares positioned with
+    crop_centering. Resize to resize_shape. Optionally convert to
+    grayscale.
+    """
     img = Image.fromarray(observation)
-    img = img.resize(self.resize_shape)
+    img = ImageOps.fit(img, self.resize_shape, centering=self.crop_centering)
     if self.grayscale:
       img = img.convert('L')
     return np.array(img)
