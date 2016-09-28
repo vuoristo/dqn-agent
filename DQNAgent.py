@@ -7,7 +7,8 @@ EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
-               exp_buffer_size=10000, epsilon=0.9, epsilon_decay=0.99,
+               exp_buffer_size=10000, epsilon=0.9, linear_epsilon_decay=True,
+               epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
                min_epsilon=0.01, batch_size=20, render=True):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
@@ -21,7 +22,12 @@ class DQNAgent(object):
     max_steps -- max number of steps per episode. default 1000000
     exp_buffer_size -- how many experiences to remember. default 40000
     epsilon -- initial probability to take random action. default 0.99
-    epsilon_decay -- exponential decay factor for epsilon. default 0.99
+    linear_epsilon_decay -- enable linear decay. True: linear,
+                            False: exponential. default True
+    epsilon_decay_steps -- how many steps for the epsilon to decay to
+                           minimum
+    exponential_epsilon_decay -- exponential decay factor for epsilon.
+                                 default 0.99
     min_epsilon -- minimum epsilon value. default 0.01
     batch_size -- number of elements in minibatch. default 20
     render -- enable environment rendering every timestep. default True
@@ -31,9 +37,12 @@ class DQNAgent(object):
     self.max_steps = max_steps
     self.batch_size = batch_size
     self.exp_buffer_size = exp_buffer_size
+
     self.eps = epsilon
     self.min_epsilon = min_epsilon
-    self.epsilon_decay = epsilon_decay
+    self.linear_epsilon_decay = linear_epsilon_decay
+    self.epsilon_decay_steps = epsilon_decay_steps
+    self.exponential_epsilon_decay = exponential_epsilon_decay
 
     self.step_log = deque(100*[0], 100)
     self.experiences = []
@@ -53,13 +62,16 @@ class DQNAgent(object):
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
         self.save_and_train(ob0, action, reward, ob1, done)
+        if self.eps > self.min_epsilon:
+          if self.linear_epsilon_decay:
+            self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
+          else:
+            self.eps *= self.exponential_epsilon_decay
         if self.render:
           self.env.render()
         if done:
           self.report(step, ep)
           self.model.post_episode()
-          if self.eps > self.min_epsilon:
-            self.eps *= self.epsilon_decay
           break
 
         ob0 = ob1
