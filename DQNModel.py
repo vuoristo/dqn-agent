@@ -1,5 +1,5 @@
-""" Parent class for DQNModels. Defines the interface for
-communication with DQNAgent.
+""" Parent class for DQNModels. Defines the interface for communication
+with DQNAgent.
 """
 import tensorflow as tf
 import numpy as np
@@ -29,11 +29,13 @@ class DQNModel(object):
     self.soft_updates = soft_updates
 
     self.input_ob0s = tf.placeholder(
-        tf.float32, shape=[None] + list(self.input_shape), name='ob0s')
+        tf.float32, shape=[None] + list(self.input_shape),
+        name='inputs_ob0s')
     self.input_ob1s = tf.placeholder(
-        tf.float32, shape=[None] + list(self.input_shape), name='ob1s')
+        tf.float32, shape=[None] + list(self.input_shape),
+        name='inputs_ob1s')
     self.actions = tf.placeholder(
-        tf.int32, shape=[None, 1], name='action')
+        tf.int32, shape=[None, 1], name='actions')
     self.rewards = tf.placeholder(
         tf.float32, shape=[None, 1], name='rewards')
     self.rewards_mask = tf.placeholder(
@@ -47,7 +49,15 @@ class DQNModel(object):
     actions_mask = tf.one_hot(self.actions, self.num_actions,
                               name='actions_mask')
 
+    # masked_online_qs is used to make the gradients of unselected
+    # actions zero. The tensor contains the online network outputs
+    # for actions not performed, making their effect on the loss zero.
     masked_online_qs = online_qs - actions_mask * online_qs
+
+    # train_targets computes the target function for training the
+    # action value function approximation. rewards_mask is a vector
+    # containing zero for terminal observations and one for
+    # non-terminals for making the targets of terminal actions zero.
     train_targets = self.rewards_mask * (
         gamma * actions_mask * target_qs + self.rewards
         ) + masked_online_qs
@@ -65,9 +75,8 @@ class DQNModel(object):
     self.train = self.optimizer.minimize(
         self.loss, global_step=self.global_step)
 
-    # The target model is updated towards the online model
-    # in either soft steps every iteration or larger steps
-    # every C iterations
+    # The target model is updated towards the online model in either
+    # soft steps every iteration or by copying the weights all at once.
     if self.soft_updates:
       self.target_updates = self.get_soft_updates()
     else:
@@ -136,7 +145,8 @@ class DQNModel(object):
     return self.infer_online_q(ob1s)
 
   def post_episode(self):
-    """Perform once per episode tasks here. Currently only hard updates.
+    """Perform once per episode tasks here. Currently only hard
+    updates.
     """
     if not self.soft_updates:
       self.do_target_updates()
