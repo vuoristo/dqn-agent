@@ -1,8 +1,7 @@
-""" Defines a model using convolutional neural network for action
-value function approximation using image inputs. The model takes
-window_size consecutive images as the input. The consecutive images
-are considered input features and are processed in one pass of the
-network.
+""" Defines a model using convolutional neural network for action value
+function approximation using image inputs. The model takes window_size
+consecutive images as the input. The consecutive images are considered
+input features and are processed in one pass of the network.
 """
 from DQNModel import DQNModel
 import numpy as np
