@@ -66,10 +66,9 @@ class DQNModel(object):
     self.loss = tf.reduce_mean(
         tf.pow(online_qs - train_targets, 2))
 
-    self.global_step = tf.Variable(0, trainable=False)
-    self.optimizer = tf.train.RMSPropOptimizer(learning_rate, momentum=momentum)
-    self.train = self.optimizer.minimize(
-        self.loss, global_step=self.global_step)
+    self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
+                                               momentum=momentum)
+    self.train = self.optimizer.minimize(self.loss)
 
     # The target model is updated towards the online model in either
     # soft steps every iteration or by copying the weights all at once
