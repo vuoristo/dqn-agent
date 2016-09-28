@@ -143,7 +143,7 @@ class DQNModel(object):
     if self.soft_updates:
       self.do_target_updates()
     else:
-      if self.steps_to_hard_update % self.total_steps == 0:
+      if self.total_steps % self.steps_to_hard_update == 0:
         self.do_target_updates()
 
   def get_q_value(self, experience):
