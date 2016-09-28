@@ -17,8 +17,8 @@ def bias_variable(shape):
   initial = tf.constant(0.01, shape=shape)
   return tf.Variable(initial)
 
-def conv2d(x,W):
-  return tf.nn.conv2d(x,W,strides=[1,1,1,1], padding='SAME')
+def conv2d(x,W,strides):
+  return tf.nn.conv2d(x,W,strides=strides, padding='SAME')
 
 def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
@@ -58,41 +58,45 @@ class ConvModel(DQNModel):
     outputs.
     """
 
-    W_conv1 = weight_variable([5,5,self.input_shape[2],32])
+    W_conv1 = weight_variable([8, 8, self.input_shape[2], 32])
     b_conv1 = bias_variable([32])
 
-    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
-    h_pool1 = max_pool_2x2(h_conv1)
+    h_conv1 = tf.nn.relu(conv2d(x, W_conv1, [1,4,4,1]) + b_conv1)
 
-    W_conv2 = weight_variable([5,5,32,64])
+    W_conv2 = weight_variable([4,4,32,64])
     b_conv2 = bias_variable([64])
 
-    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-    h_pool2 = max_pool_2x2(h_conv2)
+    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2, [1,2,2,1]) + b_conv2)
 
-    # max_pool_2x2 decreases both image axes to half length
-    pool_size = ((self.resize_shape[0] / 4) ** 2) * 64
-    W_fc1 = weight_variable([pool_size, 1024])
-    b_fc1 = bias_variable([1024])
+    W_conv3 = weight_variable([3,3,64,64])
+    b_conv3 = bias_variable([64])
 
-    h_pool2_flat = tf.reshape(h_pool2, [-1, pool_size])
-    h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, [1,1,1,1]) + b_conv3)
 
-    W_fc2 = weight_variable([1024, self.num_actions])
-    b_fc2 = bias_variable([self.num_actions])
+    conv3_out_size = 11*11*64
+    W_fc1 = weight_variable([conv3_out_size, 512])
+    b_fc1 = bias_variable([512])
 
-    outputs = tf.matmul(h_fc1, W_fc2) + b_fc2
+    h_conv3_flat = tf.reshape(h_conv3, [-1, conv3_out_size])
+    h_fc1 = tf.nn.relu(tf.matmul(h_conv3_flat, W_fc1) + b_fc1)
+
+    W_linear = weight_variable([512, self.num_actions])
+    b_linear = bias_variable([self.num_actions])
+
+    outputs = tf.matmul(h_fc1, W_linear) + b_linear
 
     net_dict = {
         'shared_vars':{
-          'W_conv1':W_conv1,
-          'b_conv1':b_conv1,
-          'W_conv2':W_conv2,
-          'b_conv2':b_conv2,
-          'W_fc1':W_fc1,
-          'b_fc1':b_fc1,
-          'W_fc2':W_fc2,
-          'b_fc2':b_fc2,
+          'W_conv1': W_conv1,
+          'b_conv1': b_conv1,
+          'W_conv2': W_conv2,
+          'b_conv2': b_conv2,
+          'W_conv3': W_conv3,
+          'b_conv3': b_conv3,
+          'W_fc1': W_fc1,
+          'b_fc1': b_fc1,
+          'W_linear': W_linear,
+          'b_linear': b_linear,
         },
         'outputs':outputs,
     }
