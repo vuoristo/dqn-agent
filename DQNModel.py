@@ -7,7 +7,7 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      soft_updates=True):
+      soft_updates=True, steps_to_hard_update=10000):
     """
     arguments:
     env -- OpenAI gym environment
@@ -18,12 +18,16 @@ class DQNModel(object):
     gamma -- Q-learning gamma. default 0.99
     tau -- Soft target update rate. default 0.01
     soft_updates -- soft target updates. default True
+    steps_to_hard_update -- number of steps between hard updates.
+                            default 10000
     """
 
     self.num_actions = env.action_space.n
     self.gamma = gamma
     self.tau = tau
     self.soft_updates = soft_updates
+    self.steps_to_hard_update = steps_to_hard_update
+    self.total_steps = 0
 
     self.input_ob0s = tf.placeholder(
         tf.float32, shape=[None] + list(self.input_shape),
@@ -68,7 +72,8 @@ class DQNModel(object):
         self.loss, global_step=self.global_step)
 
     # The target model is updated towards the online model in either
-    # soft steps every iteration or by copying the weights all at once.
+    # soft steps every iteration or by copying the weights all at once
+    # every steps_to_hard_update steps
     if self.soft_updates:
       self.target_updates = self.get_soft_updates()
     else:
@@ -134,16 +139,14 @@ class DQNModel(object):
         self.rewards:out_res,
         self.rewards_mask:rewards_mask})
 
+    self.total_steps += 1
+
     if self.soft_updates:
       self.do_target_updates()
+    else:
+      if self.steps_to_hard_update % self.total_steps == 0:
+        self.do_target_updates()
 
   def get_q_value(self, experience):
     ob1s = self.reshape_input(experience['ob1'])
     return self.infer_online_q(ob1s)
-
-  def post_episode(self):
-    """Perform once per episode tasks here. Currently only hard
-    updates.
-    """
-    if not self.soft_updates:
-      self.do_target_updates()

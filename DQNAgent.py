@@ -71,7 +71,6 @@ class DQNAgent(object):
           self.env.render()
         if done:
           self.report(step, ep)
-          self.model.post_episode()
           break
 
         ob0 = ob1
