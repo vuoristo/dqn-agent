@@ -23,7 +23,8 @@ class DQNAgent(object):
     epsilon -- initial probability to take random action. default 0.99
     epsilon_decay -- exponential decay factor for epsilon. default 0.99
     min_epsilon -- minimum epsilon value. default 0.01
-    batch_size -- number of elements in minibatch. default 50
+    batch_size -- number of elements in minibatch. default 20
+    render -- enable environment rendering every timestep. default True
     """
     self.n_actions = env.action_space.n
     self.max_episodes = max_episodes
@@ -106,8 +107,8 @@ class DQNAgent(object):
     return batch
 
   def save_and_train(self, ob0, ac, re, ob1, done):
-    """Saves experience, samples a batch of past experiences
-    and runs one training step of the model.
+    """Saves experience, samples a batch of past experiences and runs
+    one training step of the model.
     """
     ob0 = self.model.reshape_observation(ob0)
     ob1 = self.model.reshape_observation(ob1)

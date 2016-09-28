@@ -1,9 +1,14 @@
+""" Defines a model using convolutional neural network for action
+value function approximation using image inputs. The model takes
+window_size consecutive images as the input. The consecutive images
+are considered input features and are processed in one pass of the
+network.
+"""
 from DQNModel import DQNModel
 import numpy as np
 import tensorflow as tf
 
 from PIL import Image
-
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.001)
@@ -22,6 +27,17 @@ def max_pool_2x2(x):
 class ConvModel(DQNModel):
   def __init__(self, env, resize_shape=(64, 64),
               window_size=4, grayscale=True, **kwargs):
+    """
+    arguments:
+    env -- OpenAI gym environment
+
+    keyword arguments:
+    resize_shape -- All input images are resized to this shape.
+                    default (64,64)
+    window_size -- Number of consecutive observations to feed to the
+                   network
+    grayscale -- Convert inputs to grayscale. default True
+    """
     self.resize_shape = resize_shape
     self.input_shape = list(env.observation_space.shape)
     self.input_shape[0] = resize_shape[0]
@@ -36,9 +52,9 @@ class ConvModel(DQNModel):
     super(ConvModel, self).__init__(env, **kwargs)
 
   def build_net(self, x):
-    """Builds a convolutional neural network. Assumes square
-    input images. Returns a dictionary containing weight
-    variables and outputs.
+    """Builds a convolutional neural network. Assumes square input
+    images. Returns a dictionary containing weight variables and
+    outputs.
     """
 
     W_conv1 = weight_variable([5,5,self.input_shape[2],32])
