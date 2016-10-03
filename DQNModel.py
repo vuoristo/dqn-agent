@@ -7,8 +7,7 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      soft_updates=True, steps_to_hard_update=10000, enable_summaries=False,
-      train_dir='train'):
+      soft_updates=True, steps_to_hard_update=10000, train_dir='train'):
     """
     arguments:
     env -- OpenAI gym environment
