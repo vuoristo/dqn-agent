@@ -7,7 +7,8 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      soft_updates=True, steps_to_hard_update=10000):
+      soft_updates=True, steps_to_hard_update=10000, enable_summaries=False,
+      train_dir='train'):
     """
     arguments:
     env -- OpenAI gym environment
@@ -80,6 +81,8 @@ class DQNModel(object):
 
     init = tf.initialize_all_variables()
 
+    self.saver = tf.train.Saver(tf.all_variables())
+
     self.sess = tf.Session()
     self.sess.run(init)
 
@@ -145,6 +148,11 @@ class DQNModel(object):
     else:
       if self.total_steps % self.steps_to_hard_update == 0:
         self.do_target_updates()
+
+    if self.total_steps % 10000 == 0:
+      self.saver.save(self.sess,
+                      'train/model.ckpt',
+                      global_step=self.total_steps)
 
   def get_q_value(self, experience):
     ob1s = self.reshape_input(experience['ob1'])
