@@ -103,17 +103,15 @@ class ConvModel(DQNModel):
     return net_dict
 
   def reshape_input(self, observation):
-    return np.reshape(observation, [-1, self.input_shape[0],
-      self.input_shape[1], self.input_shape[2]])
+    return np.reshape(observation, (-1, self.input_shape[0],
+      self.input_shape[1], self.input_shape[2]))
 
   def infer_online_q(self, observation):
+    """ Run forward pass of the online net. input_ob0s is the input
+    placeholder for the online_model.
+    """
     q = self.sess.run(self.online_model['outputs'], feed_dict={
       self.input_ob0s:observation})
-    return q
-
-  def infer_target_q(self, observation):
-    q = self.sess.run(self.target_model['outputs'], feed_dict={
-      self.input_ob1s:observation})
     return q
 
   def reshape_observation(self, observation):

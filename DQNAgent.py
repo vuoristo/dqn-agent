@@ -6,7 +6,7 @@ from collections import deque
 EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
 
 class DQNAgent(object):
-  def __init__(self, env, model, max_episodes=100000, max_steps=1000000,
+  def __init__(self, env, model, max_episodes=200000, max_steps=1000000,
                exp_buffer_size=10000, epsilon=0.9, linear_epsilon_decay=True,
                epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
                min_epsilon=0.01, batch_size=20, render=True):
@@ -140,5 +140,5 @@ class DQNAgent(object):
 
   def report(self, steps, ep):
     self.step_log.append(steps)
-    print('Episode: {} steps: {}, mean-100: {}'.format(
-      ep, steps, np.mean(self.step_log)))
+    print('Episode: {} steps: {}, mean-100: {} epsilon: {}'.format(
+      ep, steps, np.mean(self.step_log), self.eps))
