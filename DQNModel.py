@@ -112,19 +112,15 @@ class DQNModel(object):
   def do_target_updates(self):
     self.sess.run(self.target_updates)
 
-  def train_net(self, batch):
+  def train_net(self, ob0, actions, rewards, ob1):
     """Perform one step of gradient descent training on batch.
     Also update target model if soft updates are enabled.
     """
-    ob0s = self.reshape_input(batch['ob0'])
-    ob1s = self.reshape_input(batch['ob1'])
+    ob0s = self.reshape_input(ob0)
+    ob1s = self.reshape_input(ob1)
 
-    # Select the last actions and rewards of the window because only
-    # the last actions and rewards of batch are used for training.
-    acs = np.reshape(batch['ac'], [-1, self.window_size])
-    res = np.reshape(batch['re'], [-1, self.window_size])
-    acs = np.reshape(acs[:,-1], [-1,1])
-    res = np.reshape(res[:,-1], [-1,1])
+    acs = np.reshape(actions, (-1, 1))
+    res = np.reshape(rewards, (-1, 1))
 
     # Clip rewards to -1,0,1
     out_res = np.zeros_like(res)
@@ -153,6 +149,6 @@ class DQNModel(object):
                       'train/model.ckpt',
                       global_step=self.total_steps)
 
-  def get_q_value(self, experience):
-    ob1s = self.reshape_input(experience['ob1'])
-    return self.infer_online_q(ob1s)
+  def get_q_value(self, observation):
+    ob1s = self.reshape_input(observation)
+    return self.infer_online_q(observation)

@@ -2,14 +2,13 @@ import gym
 import numpy as np
 import random
 from collections import deque
-
-EXPERIENCE_COLS = ['ob0', 'ac', 're', 'ob1', 'done']
+from ExperienceMemory import ExperienceMemory
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=200000, max_steps=1000000,
                exp_buffer_size=10000, epsilon=0.9, linear_epsilon_decay=True,
                epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=20, render=True):
+               min_epsilon=0.01, batch_size=20, render=True, warmup_steps=5e4):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -45,15 +44,19 @@ class DQNAgent(object):
     self.exponential_epsilon_decay = exponential_epsilon_decay
 
     self.step_log = deque(100*[0], 100)
-    self.experiences = []
+    self.experiences = ExperienceMemory(exp_buffer_size)
     self.window_size = model.window_size
     self.model = model
     self.env = env
+
+    self.warmup_steps = warmup_steps
+    self.warmup = True
 
     self.render = render
 
   def train(self):
     """Steps environment and runs model training."""
+    total_steps = 0
     for ep in range(self.max_episodes):
       ob0 = self.env.reset()
       step = 0
@@ -61,7 +64,7 @@ class DQNAgent(object):
         action = self.select_action()
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
-        self.save_and_train(ob0, action, reward, ob1, done)
+        self.save_and_train(ob0, action, reward, done, total_steps)
         if self.eps > self.min_epsilon:
           if self.linear_epsilon_decay:
             self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
@@ -72,71 +75,36 @@ class DQNAgent(object):
         if done:
           self.report(step, ep)
           break
+        if total_steps > self.warmup_steps:
+          self.warmup = False
 
         ob0 = ob1
         step += 1
-
-  def get_exp_window(self, index):
-    end = index if index > 0 else 1
-    start = end - self.window_size
-    start = start if start >= 0 else 0
-    sub_batch = self.experiences[start:end]
-    while len(sub_batch) < self.window_size:
-      sub_batch = [sub_batch[0]] + sub_batch
-
-    window = {k: [] for k in EXPERIENCE_COLS}
-    for exp in sub_batch:
-      for key, value in exp.items():
-        window[key] += [value]
-
-    return window
+        total_steps += 1
 
   def select_action(self):
     """Selects action for given observation."""
-    if len(self.experiences) == 0 or \
+    if self.warmup or \
         np.random.uniform(0,1) < self.eps:
       action = np.random.randint(self.n_actions)
     else:
-      exp = self.get_exp_window(len(self.experiences))
-      q = self.model.get_q_value(exp)
+      obs = self.experiences.get_current_window(self.window_size)
+      q = self.model.get_q_value(obs)
       action = np.argmax(q)
 
     return action
 
-  def sample_random_consecutive_batches(self):
-    ends = np.random.randint(
-        len(self.experiences) + 1, size=self.batch_size)
-    # always use the latest experience
-    ends = np.append(ends, len(self.experiences))
-
-    batch = {k: [] for k in EXPERIENCE_COLS}
-    for index in ends:
-      sub_batch = self.get_exp_window(index)
-      for key, value in sub_batch.items():
-        batch[key] += value
-
-    return batch
-
-  def save_and_train(self, ob0, ac, re, ob1, done):
+  def save_and_train(self, ob0, ac, re, done, total_steps):
     """Saves experience, samples a batch of past experiences and runs
     one training step of the model.
     """
     ob0 = self.model.reshape_observation(ob0)
-    ob1 = self.model.reshape_observation(ob1)
-    experience = {
-      'ob0':ob0,
-      'ac':ac,
-      're':re,
-      'ob1':ob1,
-      'done':done,
-    }
-    self.experiences.append(experience)
-    mini_batch = self.sample_random_consecutive_batches()
+    self.experiences.save_experience(ob0, ac, re, done)
 
-    if len(self.experiences) > self.exp_buffer_size:
-      self.experiences.pop(0)
-
-    self.model.train_net(mini_batch)
+    if total_steps > self.batch_size:
+      mb_ob0, mb_ac, mb_re, mb_ob1 = self.experiences.sample_minibatch(
+          self.batch_size, self.window_size)
+      self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1)
 
   def report(self, steps, ep):
     self.step_log.append(steps)
