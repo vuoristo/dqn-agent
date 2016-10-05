@@ -43,7 +43,7 @@ class DQNAgent(object):
     self.epsilon_decay_steps = epsilon_decay_steps
     self.exponential_epsilon_decay = exponential_epsilon_decay
 
-    self.step_log = deque(100*[0], 100)
+    self.reward_log = deque(100*[0], 100)
     self.experiences = ExperienceMemory(exp_buffer_size)
     self.window_size = model.window_size
     self.model = model
@@ -60,10 +60,12 @@ class DQNAgent(object):
     for ep in range(self.max_episodes):
       ob0 = self.env.reset()
       step = 0
+      rewards = 0
       while step < self.max_steps:
         action = self.select_action()
         ob1, reward, done, info = self.env.step(action)
         reward = reward if not done else 0
+        rewards += reward
         self.save_and_train(ob0, action, reward, done, total_steps)
         if self.eps > self.min_epsilon:
           if self.linear_epsilon_decay:
@@ -73,7 +75,7 @@ class DQNAgent(object):
         if self.render:
           self.env.render()
         if done:
-          self.report(step, ep)
+          self.report(total_steps, step, rewards, ep)
           break
         if total_steps > self.warmup_steps:
           self.warmup = False
@@ -106,7 +108,8 @@ class DQNAgent(object):
           self.batch_size, self.window_size)
       self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1)
 
-  def report(self, steps, ep):
-    self.step_log.append(steps)
-    print('Episode: {} steps: {}, mean-100: {} epsilon: {}'.format(
-      ep, steps, np.mean(self.step_log), self.eps))
+  def report(self, total_steps, steps, rewards, episode):
+    self.reward_log.append(rewards)
+    print('Episode: {} Total steps: {}, steps: {}, reward: {} mean-100: '
+          '{} epsilon: {}'.format(episode, total_steps, steps, rewards,
+          np.mean(self.reward_log), self.eps))
