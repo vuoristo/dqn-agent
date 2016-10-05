@@ -10,7 +10,7 @@ def main():
       tau=0.01, soft_updates=False)
   agent = DQNAgent(env, model, linear_epsilon_decay=True,
       epsilon_decay_steps=1.e6, epsilon=1.0, min_epsilon=0.1,
-      exp_buffer_size=1e6, batch_size=32)
+      exp_buffer_size=1000000, batch_size=32, render=False)
   agent.train()
 
 if __name__ == '__main__':
