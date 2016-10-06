@@ -64,7 +64,7 @@ class ExperienceMemory(object):
 
   def get_current_window(self, window_size):
     last_idx = self.observations.get_last_index()
-    return [self.get_exp_window(last_idx, window_size)]
+    return self.get_exp_window(last_idx, window_size)
 
   def sample_minibatch(self, batch_size, window_size):
     window_size = window_size + 1

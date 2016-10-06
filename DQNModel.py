@@ -151,4 +151,4 @@ class DQNModel(object):
 
   def get_q_value(self, observation):
     ob1s = self.reshape_input(observation)
-    return self.infer_online_q(observation)
+    return self.infer_online_q(ob1s)
