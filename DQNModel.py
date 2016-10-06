@@ -7,7 +7,8 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      soft_updates=True, steps_to_hard_update=10000, train_dir='train'):
+      soft_updates=True, steps_to_hard_update=10000, train_dir='train',
+      collect_summaries=True):
     """
     arguments:
     env -- OpenAI gym environment
@@ -28,6 +29,7 @@ class DQNModel(object):
     self.soft_updates = soft_updates
     self.steps_to_hard_update = steps_to_hard_update
     self.total_steps = 0
+    self.collect_summaries = collect_summaries
 
     with tf.variable_scope('inputs'):
       self.first_observation = tf.placeholder(
@@ -74,7 +76,6 @@ class DQNModel(object):
     with tf.variable_scope('main_loss'):
       self.loss = tf.nn.l2_loss(online_qs - self.train_targets, name='loss')
 
-
     self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
                                                momentum=momentum)
     self.train = self.optimizer.minimize(self.loss)
@@ -92,7 +93,12 @@ class DQNModel(object):
 
     self.saver = tf.train.Saver(tf.all_variables())
 
+    loss_summary = tf.scalar_summary('loss', self.loss)
+    q_summary = tf.scalar_summary('max_q', tf.reduce_max(online_qs))
+    self.summary_op = tf.merge_all_summaries()
+
     self.sess = tf.Session()
+    self.summary_writer = tf.train.SummaryWriter(train_dir, self.sess.graph)
     self.sess.run(init)
 
   def get_hard_updates(self):
@@ -153,6 +159,15 @@ class DQNModel(object):
     else:
       if self.total_steps % self.steps_to_hard_update == 0:
         self.do_target_updates()
+
+    if self.collect_summaries and self.total_steps % 100 == 0:
+      summary_str = self.sess.run(self.summary_op, feed_dict={
+        self.first_observation:ob0s,
+        self.second_observation:ob1s,
+        self.actions:acs,
+        self.rewards:out_res,
+        self.rewards_mask:rewards_mask})
+      self.summary_writer.add_summary(summary_str, self.total_steps)
 
     if self.total_steps % 10000 == 0:
       self.saver.save(self.sess,
