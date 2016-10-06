@@ -66,12 +66,13 @@ class DQNModel(object):
     # action value function approximation. rewards_mask is a vector
     # containing zero for terminal observations and one for
     # non-terminals for making the targets of terminal actions zero.
-    with tf.name_scope('train_targets'):
-      train_targets = self.rewards_mask * (
+    with tf.variable_scope('train_targets'):
+      self.train_targets = self.rewards_mask * (
           gamma * actions_mask * target_qs + self.rewards
           ) + masked_online_qs
 
-    self.loss = tf.nn.l2_loss(online_qs - train_targets, name='main_loss')
+    with tf.variable_scope('main_loss'):
+      self.loss = tf.nn.l2_loss(online_qs - self.train_targets, name='loss')
 
 
     self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
