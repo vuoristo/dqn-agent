@@ -67,7 +67,7 @@ class DQNAgent(object):
         reward = reward if not done else 0
         rewards += reward
         self.save_and_train(ob0, action, reward, done, total_steps)
-        if self.eps > self.min_epsilon:
+        if not self.warmup and self.eps > self.min_epsilon:
           if self.linear_epsilon_decay:
             self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
           else:
