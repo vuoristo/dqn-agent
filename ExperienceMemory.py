@@ -31,7 +31,7 @@ class RingBuffer(object):
     self.data[(self.start + self.length - 1) % self.max_length] = value
 
   def get_last_index(self):
-    return (self.start + self.length - 1) % self.max_length
+    return self.length - 1
 
 class ExperienceMemory(object):
   def __init__(self, memory_length=10000):
@@ -74,12 +74,14 @@ class ExperienceMemory(object):
     mb_second_obs = []
 
     last_index = self.observations.get_last_index()
-    window_ends = np.random.randint(window_size, last_index,
+    window_ends = np.random.randint(window_size - 1, last_index,
         size=batch_size)
     # always include the latest observation for training
     window_ends[-1] = (self.observations.get_last_index())
 
     for end in window_ends:
+      # window cannot end with the first observation of an
+      # episode
       if self.completions[end-1] == True:
         end -= 1
       observations = self.get_exp_window(end, window_size)
