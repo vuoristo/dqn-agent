@@ -40,8 +40,7 @@ Known differences to the DQN paper
 
 Todos, missing features
 -----------------------
-* Tests
 * Loading and evaluating pretrained networks.
 * OpenAI Gym writeup support and demonstrations of fully trained networks should be added.
-* The runtime statistics available from the execution are lacking. Especially Tensorboard support should be added.
 * Some naming of parameters and other slight style issues.
+* More thorough testing
