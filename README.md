@@ -40,7 +40,6 @@ Known differences to the DQN paper
 
 Todos, missing features
 -----------------------
-* The experience replay memory implementation is naive and wasteful. It will be refactored shortly.
 * Tests
 * Loading and evaluating pretrained networks.
 * OpenAI Gym writeup support and demonstrations of fully trained networks should be added.
