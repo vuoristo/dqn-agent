@@ -51,8 +51,10 @@ class DQNModel(object):
     online_qs = self.online_model['outputs']
     target_qs = self.target_model['outputs']
 
-    actions_mask = tf.one_hot(self.actions, self.num_actions,
-                              name='actions_mask')
+    with tf.variable_scope('actions_mask'):
+      actions_mask = tf.one_hot(self.actions, self.num_actions,
+                                name='actions_mask')
+      actions_mask = tf.reshape(actions_mask, (-1, self.num_actions))
 
     # masked_online_qs is used to make the gradients of unselected
     # actions zero. The tensor contains the online network outputs
