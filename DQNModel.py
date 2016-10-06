@@ -29,42 +29,48 @@ class DQNModel(object):
     self.steps_to_hard_update = steps_to_hard_update
     self.total_steps = 0
 
-    self.input_ob0s = tf.placeholder(
-        tf.float32, shape=[None] + list(self.input_shape),
-        name='inputs_ob0s')
-    self.input_ob1s = tf.placeholder(
-        tf.float32, shape=[None] + list(self.input_shape),
-        name='inputs_ob1s')
-    self.actions = tf.placeholder(
-        tf.int32, shape=[None, 1], name='actions')
-    self.rewards = tf.placeholder(
-        tf.float32, shape=[None, 1], name='rewards')
-    self.rewards_mask = tf.placeholder(
-        tf.float32, shape=[None, 1], name='rewards_mask')
+    with tf.variable_scope('inputs'):
+      self.first_observation = tf.placeholder(
+          tf.float32, shape=[None] + list(self.input_shape),
+          name='first_observation')
+      self.second_observation = tf.placeholder(
+          tf.float32, shape=[None] + list(self.input_shape),
+          name='second_observation')
+      self.actions = tf.placeholder(
+          tf.int32, shape=[None, 1], name='actions')
+      self.rewards = tf.placeholder(
+          tf.float32, shape=[None, 1], name='rewards')
+      self.rewards_mask = tf.placeholder(
+          tf.float32, shape=[None, 1], name='rewards_mask')
 
-    self.online_model = self.build_net(self.input_ob0s)
-    self.target_model = self.build_net(self.input_ob1s)
+    with tf.variable_scope('online_model'):
+      self.online_model = self.build_net(self.first_observation, trainable=True)
+    with tf.variable_scope('target_model'):
+      self.target_model = self.build_net(self.second_observation, trainable=False)
 
     online_qs = self.online_model['outputs']
     target_qs = self.target_model['outputs']
+
     actions_mask = tf.one_hot(self.actions, self.num_actions,
                               name='actions_mask')
 
     # masked_online_qs is used to make the gradients of unselected
     # actions zero. The tensor contains the online network outputs
     # for actions not performed, making their effect on the loss zero.
-    masked_online_qs = online_qs - actions_mask * online_qs
+    with tf.name_scope('masked_online_qs'):
+      masked_online_qs = online_qs - actions_mask * online_qs
 
     # train_targets computes the target function for training the
     # action value function approximation. rewards_mask is a vector
     # containing zero for terminal observations and one for
     # non-terminals for making the targets of terminal actions zero.
-    train_targets = self.rewards_mask * (
-        gamma * actions_mask * target_qs + self.rewards
-        ) + masked_online_qs
+    with tf.name_scope('train_targets'):
+      train_targets = self.rewards_mask * (
+          gamma * actions_mask * target_qs + self.rewards
+          ) + masked_online_qs
 
-    self.loss = tf.reduce_mean(
-        tf.pow(online_qs - train_targets, 2))
+    self.loss = tf.nn.l2_loss(online_qs - train_targets, name='main_loss')
+
 
     self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
                                                momentum=momentum)
@@ -73,10 +79,11 @@ class DQNModel(object):
     # The target model is updated towards the online model in either
     # soft steps every iteration or by copying the weights all at once
     # every steps_to_hard_update steps
-    if self.soft_updates:
-      self.target_updates = self.get_soft_updates()
-    else:
-      self.target_updates = self.get_hard_updates()
+    with tf.variable_scope('target_updates'):
+      if self.soft_updates:
+        self.target_updates = self.get_soft_updates()
+      else:
+        self.target_updates = self.get_hard_updates()
 
     init = tf.initialize_all_variables()
 
@@ -130,8 +137,8 @@ class DQNModel(object):
     rewards_mask[np.nonzero(res)] = 1.
 
     loss, _ = self.sess.run([self.loss, self.train], feed_dict={
-        self.input_ob0s:ob0s,
-        self.input_ob1s:ob1s,
+        self.first_observation:ob0s,
+        self.second_observation:ob1s,
         self.actions:acs,
         self.rewards:out_res,
         self.rewards_mask:rewards_mask})
