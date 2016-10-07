@@ -72,6 +72,7 @@ class ExperienceMemory(object):
     mb_rewards = []
     mb_first_obs = []
     mb_second_obs = []
+    mb_terms = []
 
     last_index = self.observations.get_last_index()
     window_ends = np.random.randint(window_size - 1, last_index,
@@ -89,5 +90,6 @@ class ExperienceMemory(object):
       mb_second_obs += observations[1:]
       mb_actions.append(self.actions[end-1])
       mb_rewards.append(self.rewards[end-1])
+      mb_terms.append(self.completions[end-1])
 
-    return mb_first_obs, mb_actions, mb_rewards, mb_second_obs
+    return mb_first_obs, mb_actions, mb_rewards, mb_second_obs, mb_terms

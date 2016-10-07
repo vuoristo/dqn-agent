@@ -104,9 +104,9 @@ class DQNAgent(object):
     self.experiences.save_experience(ob0, ac, re, done)
 
     if total_steps > self.batch_size:
-      mb_ob0, mb_ac, mb_re, mb_ob1 = self.experiences.sample_minibatch(
+      mb_ob0, mb_ac, mb_re, mb_ob1, mb_term = self.experiences.sample_minibatch(
           self.batch_size, self.window_size)
-      self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1)
+      self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1, mb_term)
 
   def report(self, total_steps, steps, rewards, episode):
     self.reward_log.append(rewards)

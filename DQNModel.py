@@ -42,8 +42,8 @@ class DQNModel(object):
           tf.int32, shape=[None, 1], name='actions')
       self.rewards = tf.placeholder(
           tf.float32, shape=[None, 1], name='rewards')
-      self.rewards_mask = tf.placeholder(
-          tf.float32, shape=[None, 1], name='rewards_mask')
+      self.terminals_mask = tf.placeholder(
+          tf.float32, shape=[None, 1], name='terminals_mask')
 
     with tf.variable_scope('online_model'):
       self.online_model = self.build_net(self.first_observation, trainable=True)
@@ -65,11 +65,11 @@ class DQNModel(object):
       masked_online_qs = online_qs - actions_mask * online_qs
 
     # train_targets computes the target function for training the
-    # action value function approximation. rewards_mask is a vector
+    # action value function approximation. terminals_mask is a vector
     # containing zero for terminal observations and one for
     # non-terminals for making the targets of terminal actions zero.
     with tf.variable_scope('train_targets'):
-      self.train_targets = self.rewards_mask * (
+      self.train_targets = self.terminals_mask * (
           gamma * actions_mask * target_qs + self.rewards
           ) + masked_online_qs
 
@@ -128,7 +128,7 @@ class DQNModel(object):
   def do_target_updates(self):
     self.sess.run(self.target_updates)
 
-  def train_net(self, ob0, actions, rewards, ob1):
+  def train_net(self, ob0, actions, rewards, ob1, terminals):
     """Perform one step of gradient descent training on batch.
     Also update target model if soft updates are enabled.
     """
@@ -137,20 +137,20 @@ class DQNModel(object):
 
     acs = np.reshape(actions, (-1, 1))
     res = np.reshape(rewards, (-1, 1))
+    terms = np.reshape(terminals, (-1, 1))
 
     # Clip rewards to -1,0,1
     out_res = np.zeros_like(res)
     out_res[np.nonzero(res)] = 1. * np.sign(res[np.nonzero(res)])
 
-    rewards_mask = np.zeros_like(res)
-    rewards_mask[np.nonzero(res)] = 1.
+    terminals_mask = np.invert(terms) * 1
 
     loss, _ = self.sess.run([self.loss, self.train], feed_dict={
         self.first_observation:ob0s,
         self.second_observation:ob1s,
         self.actions:acs,
         self.rewards:out_res,
-        self.rewards_mask:rewards_mask})
+        self.terminals_mask:terminals_mask})
 
     self.total_steps += 1
 
