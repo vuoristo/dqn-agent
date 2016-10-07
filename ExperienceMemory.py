@@ -90,6 +90,6 @@ class ExperienceMemory(object):
       mb_second_obs += observations[1:]
       mb_actions.append(self.actions[end-1])
       mb_rewards.append(self.rewards[end-1])
-      mb_terms.append(self.completions[end-1])
+      mb_terms.append(self.completions[end])
 
     return mb_first_obs, mb_actions, mb_rewards, mb_second_obs, mb_terms
