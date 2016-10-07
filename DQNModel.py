@@ -166,7 +166,7 @@ class DQNModel(object):
         self.second_observation:ob1s,
         self.actions:acs,
         self.rewards:out_res,
-        self.rewards_mask:rewards_mask})
+        self.terminals_mask:terminals_mask})
       self.summary_writer.add_summary(summary_str, self.total_steps)
 
     if self.total_steps % 10000 == 0:
