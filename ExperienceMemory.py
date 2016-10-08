@@ -67,7 +67,7 @@ class ExperienceMemory(object):
     return self.get_exp_window(last_idx, window_size)
 
   def sample_minibatch(self, batch_size, window_size):
-    window_size = window_size + 1
+    full_window_size = window_size + 1
     mb_actions = []
     mb_rewards = []
     mb_first_obs = []
@@ -75,17 +75,17 @@ class ExperienceMemory(object):
     mb_terms = []
 
     last_index = self.observations.get_last_index()
-    window_ends = np.random.randint(window_size - 1, last_index,
+    window_ends = np.random.randint(window_size, last_index,
         size=batch_size)
     # always include the latest observation for training
     window_ends[-1] = (self.observations.get_last_index())
 
     for end in window_ends:
-      # window cannot end with the first observation of an
-      # episode
-      if self.terminals[end-1] == True:
-        end -= 1
-      observations = self.get_exp_window(end, window_size)
+      # window cannot end with the first observation of an episode
+      while self.terminals[end-1] == True:
+        end = np.random.randint(window_size, last_index,
+            size=1)[0]
+      observations = self.get_exp_window(end, full_window_size)
       mb_first_obs += observations[0:-1]
       mb_second_obs += observations[1:]
       mb_actions.append(self.actions[end-1])
