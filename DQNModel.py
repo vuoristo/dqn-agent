@@ -73,7 +73,7 @@ class DQNModel(object):
     # non-terminals for making the targets of terminal actions zero.
     with tf.variable_scope('train_targets'):
       self.train_targets = self.terminals_mask * (
-          gamma * actions_mask * target_qs + self.rewards
+          gamma * actions_mask * target_qs + actions_mask * self.rewards
           ) + masked_online_qs
 
     with tf.variable_scope('main_loss'):
