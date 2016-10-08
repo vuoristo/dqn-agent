@@ -48,7 +48,7 @@ class ExperienceMemoryTestCase(unittest.TestCase):
       self.assertEqual(mem.observations[i], i)
       self.assertEqual(mem.actions[i], i)
       self.assertEqual(mem.rewards[i], i)
-      self.assertEqual(mem.completions[i], False)
+      self.assertEqual(mem.terminals[i], False)
 
   def test_save_experience_more(self):
     mem = ExperienceMemory(memory_length=100)
@@ -60,7 +60,7 @@ class ExperienceMemoryTestCase(unittest.TestCase):
       self.assertEqual(mem.observations[i], i + 20)
       self.assertEqual(mem.actions[i], i + 20)
       self.assertEqual(mem.rewards[i], i + 20)
-      self.assertEqual(mem.completions[i], False)
+      self.assertEqual(mem.terminals[i], False)
 
   def test_get_exp_window(self):
     mem = ExperienceMemory(100)
@@ -100,7 +100,7 @@ class ExperienceMemoryTestCase(unittest.TestCase):
     for i in range(6):
       mem.save_experience(i,i,i,False)
 
-    mbo1, mba, mbr, mbo2 = mem.sample_minibatch(3,2)
+    mbo1, mba, mbr, mbo2, term = mem.sample_minibatch(3,2)
     self.assertEqual(len(mbo1), 6)
     self.assertEqual(len(mba), 3)
 
@@ -108,6 +108,6 @@ class ExperienceMemoryTestCase(unittest.TestCase):
     mem.save_experience(8,1,1,True)
     mem.save_experience(9,1,1,False)
     mem.save_experience(10,1,1,False)
-    mbo1, mba, mbr, mbo2 = mem.sample_minibatch(3,5)
+    mbo1, mba, mbr, mbo2, term = mem.sample_minibatch(3,5)
     self.assertEqual(mbo1[-1], 9)
     self.assertEqual(mbo2[-1], 10)

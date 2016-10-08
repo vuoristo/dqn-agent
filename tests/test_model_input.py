@@ -36,7 +36,7 @@ class ModelInputTestCase(unittest.TestCase):
 
     self.assertEqual(model.actions.get_shape().as_list(), [None, 1])
     self.assertEqual(model.rewards.get_shape().as_list(), [None, 1])
-    self.assertEqual(model.rewards_mask.get_shape().as_list(), [None, 1])
+    self.assertEqual(model.terminals_mask.get_shape().as_list(), [None, 1])
 
     o_qs = model.online_model['outputs']
     t_qs = model.online_model['outputs']
