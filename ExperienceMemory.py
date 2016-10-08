@@ -1,5 +1,5 @@
 """ Implements data structures to save and sample previous
-observations, actions, rewards and completions.
+observations, actions, rewards and terminals.
 
 RingBuffer implementation is from
 https://github.com/matthiasplappert/keras-rl/
@@ -39,18 +39,18 @@ class ExperienceMemory(object):
     self.actions = RingBuffer(memory_length)
     self.rewards = RingBuffer(memory_length)
     self.observations = RingBuffer(memory_length)
-    self.completions = RingBuffer(memory_length)
+    self.terminals = RingBuffer(memory_length)
 
   def save_experience(self, observation, action, reward, done):
     self.observations.append(observation)
     self.actions.append(action)
     self.rewards.append(reward)
-    self.completions.append(done)
+    self.terminals.append(done)
 
   def get_exp_window(self, end, window_size):
     observations = []
     for i in range(window_size):
-      if i > 0 and self.completions[end - i] == True:
+      if i > 0 and self.terminals[end - i] == True:
         break
       observations.append(self.observations[end - i])
 
@@ -83,13 +83,13 @@ class ExperienceMemory(object):
     for end in window_ends:
       # window cannot end with the first observation of an
       # episode
-      if self.completions[end-1] == True:
+      if self.terminals[end-1] == True:
         end -= 1
       observations = self.get_exp_window(end, window_size)
       mb_first_obs += observations[0:-1]
       mb_second_obs += observations[1:]
       mb_actions.append(self.actions[end-1])
       mb_rewards.append(self.rewards[end-1])
-      mb_terms.append(self.completions[end])
+      mb_terms.append(self.terminals[end])
 
     return mb_first_obs, mb_actions, mb_rewards, mb_second_obs, mb_terms
