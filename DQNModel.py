@@ -21,6 +21,9 @@ class DQNModel(object):
     soft_updates -- soft target updates. default True
     steps_to_hard_update -- number of steps between hard updates.
                             default 10000
+    train_dir -- directory where summaries and variables are saved.
+                 default train
+    collect_summaries -- toggle summary collection. default True
     """
 
     self.num_actions = env.action_space.n

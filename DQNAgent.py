@@ -6,7 +6,7 @@ from ExperienceMemory import ExperienceMemory
 
 class DQNAgent(object):
   def __init__(self, env, model, max_episodes=200000, max_steps=1000000,
-               exp_buffer_size=10000, epsilon=0.9, linear_epsilon_decay=True,
+               exp_buffer_size=40000, epsilon=0.9, linear_epsilon_decay=True,
                epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
                min_epsilon=0.01, batch_size=20, render=True, warmup_steps=5e4):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
@@ -17,19 +17,20 @@ class DQNAgent(object):
     model -- model for Q-function approximation
 
     keyword arguments:
-    max_episodes -- default 100000
+    max_episodes -- default 200000
     max_steps -- max number of steps per episode. default 1000000
     exp_buffer_size -- how many experiences to remember. default 40000
-    epsilon -- initial probability to take random action. default 0.99
+    epsilon -- initial probability to take random action. default 0.9
     linear_epsilon_decay -- enable linear decay. True: linear,
                             False: exponential. default True
     epsilon_decay_steps -- how many steps for the epsilon to decay to
-                           minimum
+                           minimum. default 1000000
     exponential_epsilon_decay -- exponential decay factor for epsilon.
                                  default 0.99
     min_epsilon -- minimum epsilon value. default 0.01
     batch_size -- number of elements in minibatch. default 20
     render -- enable environment rendering every timestep. default True
+    warmup_steps -- how many steps to run before epsilon decay starts
     """
     self.n_actions = env.action_space.n
     self.max_episodes = max_episodes
