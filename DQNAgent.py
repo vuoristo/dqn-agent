@@ -45,8 +45,9 @@ class DQNAgent(object):
     self.exponential_epsilon_decay = exponential_epsilon_decay
 
     self.reward_log = deque(100*[0], 100)
-    self.experiences = ExperienceMemory(exp_buffer_size)
     self.window_size = model.window_size
+    self.experiences = ExperienceMemory(exp_buffer_size)
+    self.recent_observations = deque(maxlen=self.window_size)
     self.model = model
     self.env = env
 
@@ -56,34 +57,46 @@ class DQNAgent(object):
     self.render = render
 
   def train(self):
-    """Steps environment and runs model training."""
+    """ The training loop of the DQNAgent. Steps the environment,
+    saves observations and calls model training.
+    """
     total_steps = 0
     for ep in range(self.max_episodes):
-      ob0 = self.env.reset()
       step = 0
       rewards = 0
+      first_observation = self.env.reset()
+      # recent_observations are episode specific
+      self.recent_observations = deque(maxlen=self.window_size)
+      self.append_to_recent_observations(first_observation)
       while step < self.max_steps:
+        # select action according to the recent_observations
         action = self.select_action()
-        ob1, reward, done, info = self.env.step(action)
-        reward = reward if not done else 0
+        second_observation, reward, done, _ = self.env.step(action)
+
+        # observations are saved with the same index as the
+        # action, reward and done following them
+        self.save_experience(action, reward, done)
+        self.append_to_recent_observations(second_observation)
+        first_observation = second_observation
+
         rewards += reward
-        self.save_and_train(ob0, action, reward, done, total_steps)
-        if not self.warmup and self.eps > self.min_epsilon:
-          if self.linear_epsilon_decay:
-            self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
-          else:
-            self.eps *= self.exponential_epsilon_decay
+        step += 1
+        total_steps += 1
+
         if self.render:
           self.env.render()
+        if total_steps > self.warmup_steps:
+          self.warmup = False
+        if not self.warmup:
+          self.train_model()
+          if self.eps > self.min_epsilon:
+            if self.linear_epsilon_decay:
+              self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
+            else:
+              self.eps *= self.exponential_epsilon_decay
         if done:
           self.report(total_steps, step, rewards, ep)
           break
-        if total_steps > self.warmup_steps:
-          self.warmup = False
-
-        ob0 = ob1
-        step += 1
-        total_steps += 1
 
   def select_action(self):
     """Selects action for given observation."""
@@ -91,23 +104,26 @@ class DQNAgent(object):
         np.random.uniform(0,1) < self.eps:
       action = np.random.randint(self.n_actions)
     else:
-      obs = self.experiences.get_current_window(self.window_size)
+      obs = list(self.recent_observations)
+      while len(obs) < self.window_size:
+        obs = [obs[0]] + obs
       q = self.model.get_q_value(obs)
       action = np.argmax(q)
 
     return action
 
-  def save_and_train(self, ob0, ac, re, done, total_steps):
-    """Saves experience, samples a batch of past experiences and runs
-    one training step of the model.
-    """
-    ob0 = self.model.reshape_observation(ob0)
-    self.experiences.save_experience(ob0, ac, re, done)
+  def append_to_recent_observations(self, observation):
+    observation = self.model.reshape_observation(observation)
+    self.recent_observations.append(observation)
 
-    if total_steps > self.batch_size:
-      mb_ob0, mb_ac, mb_re, mb_ob1, mb_term = self.experiences.sample_minibatch(
-          self.batch_size, self.window_size)
-      self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1, mb_term)
+  def save_experience(self, action, reward, done):
+    self.experiences.save_experience(self.recent_observations[-1],
+        action, reward, done)
+
+  def train_model(self):
+    mb_ob0, mb_ac, mb_re, mb_ob1, mb_term = self.experiences.sample_minibatch(
+        self.batch_size, self.window_size)
+    self.model.train_net(mb_ob0, mb_ac, mb_re, mb_ob1, mb_term)
 
   def report(self, total_steps, steps, rewards, episode):
     self.reward_log.append(rewards)
