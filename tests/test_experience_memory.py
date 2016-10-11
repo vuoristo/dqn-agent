@@ -23,21 +23,6 @@ class RingBufferTestCase(unittest.TestCase):
     for i in range(buf_len):
       self.assertEqual(buf[i], 20 + i)
 
-  def test_get_last_index(self):
-    buf_len = 100
-    buf = RingBuffer(buf_len)
-    for i in range(int(buf_len/2)):
-      buf.append(i)
-
-    self.assertEqual(buf.get_last_index(), buf_len/2 - 1)
-    self.assertEqual(buf[buf.get_last_index()], 49)
-
-    for i in range(buf_len):
-      buf.append(i)
-
-    self.assertEqual(buf.get_last_index(), buf_len - 1)
-    self.assertEqual(buf[buf.get_last_index()], 99)
-
 class ExperienceMemoryTestCase(unittest.TestCase):
   def test_save_experience_simple(self):
     mem = ExperienceMemory(memory_length=100)
@@ -71,29 +56,10 @@ class ExperienceMemoryTestCase(unittest.TestCase):
 
     # window should be padded with the first observation
     mem.save_experience(70,7,7,False)
-    self.assertEqual(mem.get_exp_window(11, 5), [70,70,70,70,70])
+    self.assertEqual(mem.get_exp_window(11, 5), [7,8,9,66,70])
+    mem.save_experience(70,7,7,False)
+    self.assertEqual(mem.get_exp_window(12, 5), [70,70,70,70,70])
     self.assertEqual(mem.get_exp_window(6, 5), [2,3,4,5,6])
-
-  def test_get_current_window(self):
-    mem = ExperienceMemory(memory_length=100)
-    for i in range(4):
-      mem.save_experience(i,i,i,False)
-    ob = mem.get_current_window(4)
-    self.assertEqual(ob, [0,1,2,3])
-
-    mem.save_experience(1,2,3,True)
-    ob = mem.get_current_window(4)
-    self.assertEqual(ob, [1,2,3,1])
-
-    mem.save_experience(1,2,3,False)
-    ob = mem.get_current_window(4)
-    self.assertEqual(ob, [1,1,1,1])
-
-    for i in range(120):
-      mem.save_experience(i,i,i,False)
-
-    ob = mem.get_current_window(4)
-    self.assertEqual(ob, [116,117,118,119])
 
   def test_sample_minibatch(self):
     mem = ExperienceMemory(memory_length=100)
