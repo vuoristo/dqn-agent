@@ -30,9 +30,6 @@ class RingBuffer(object):
 
     self.data[(self.start + self.length - 1) % self.max_length] = value
 
-  def get_last_index(self):
-    return self.length - 1
-
 class ExperienceMemory(object):
   def __init__(self, memory_length=10000):
     self.memory_length = memory_length
@@ -49,8 +46,14 @@ class ExperienceMemory(object):
 
   def get_exp_window(self, end, window_size):
     observations = []
+    # The terminality of the last observation does not affect
+    # computation. The last observation of the first window (second
+    # index in this loop) determines the action, reward and
+    # and terminality of the window.
     for i in range(window_size):
-      if i > 0 and self.terminals[end - i] == True:
+      # Terminals at an earlier index than end - 1 belong to another
+      # episode.
+      if i > 1 and self.terminals[end - i] == True:
         break
       observations.append(self.observations[end - i])
 
@@ -62,10 +65,6 @@ class ExperienceMemory(object):
 
     return observations
 
-  def get_current_window(self, window_size):
-    last_idx = self.observations.get_last_index()
-    return self.get_exp_window(last_idx, window_size)
-
   def sample_minibatch(self, batch_size, window_size):
     full_window_size = window_size + 1
     mb_actions = []
@@ -74,22 +73,18 @@ class ExperienceMemory(object):
     mb_second_obs = []
     mb_terms = []
 
-    last_index = self.observations.get_last_index()
+    last_index = len(self.observations) - 1
     window_ends = np.random.randint(window_size, last_index,
         size=batch_size)
     # always include the latest observation for training
-    window_ends[-1] = (self.observations.get_last_index())
+    window_ends[-1] = last_index
 
     for end in window_ends:
-      # window cannot end with the first observation of an episode
-      while self.terminals[end-1] == True:
-        end = np.random.randint(window_size, last_index,
-            size=1)[0]
       observations = self.get_exp_window(end, full_window_size)
       mb_first_obs += observations[0:-1]
       mb_second_obs += observations[1:]
       mb_actions.append(self.actions[end-1])
       mb_rewards.append(self.rewards[end-1])
-      mb_terms.append(self.terminals[end])
+      mb_terms.append(self.terminals[end-1])
 
     return mb_first_obs, mb_actions, mb_rewards, mb_second_obs, mb_terms
