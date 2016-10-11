@@ -34,19 +34,20 @@ class ConvModel(DQNModel):
                     default (84,84)
     crop_centering -- Control the cropping position. Default (0.5,0.7)
     window_size -- Number of consecutive observations to feed to the
-                   network
+                   network. default 4
     grayscale -- Convert inputs to grayscale. default True
     """
     self.resize_shape = resize_shape
     self.crop_centering = crop_centering
     self.input_shape = [0,0,0]
-    self.input_shape[0] = 3 # dimension of color channel
     self.input_shape[1] = resize_shape[0]
     self.input_shape[2] = resize_shape[1]
 
     self.grayscale = grayscale
     if grayscale:
       self.input_shape[0] = window_size
+    else:
+      raise NotImplementedError()
 
     self.window_size = window_size
     super(ConvModel, self).__init__(env, **kwargs)
