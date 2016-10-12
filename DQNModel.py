@@ -56,28 +56,21 @@ class DQNModel(object):
     online_qs = self.online_model['outputs']
     target_qs = self.target_model['outputs']
 
-    with tf.variable_scope('actions_mask'):
+    with tf.variable_scope('train_targets'):
       actions_mask = tf.one_hot(self.actions, self.num_actions,
                                 name='actions_mask')
       actions_mask = tf.reshape(actions_mask, (-1, self.num_actions))
+      masked_online_qs = tf.reduce_sum(actions_mask*online_qs, reduction_indices=1)
+      masked_online_qs = tf.reshape(masked_online_qs, (-1, 1))
+      max_q_t_1 = tf.reduce_max(target_qs, reduction_indices=1)
+      max_q_t_1 = tf.reshape(max_q_t_1, (-1, 1))
 
-    # masked_online_qs is used to make the gradients of unselected
-    # actions zero. The tensor contains the online network outputs
-    # for actions not performed, making their effect on the loss zero.
-    with tf.name_scope('masked_online_qs'):
-      masked_online_qs = online_qs - actions_mask * online_qs
-
-    # train_targets computes the target function for training the
-    # action value function approximation. terminals_mask is a vector
-    # containing zero for terminal observations and one for
-    # non-terminals for making the targets of terminal actions zero.
-    with tf.variable_scope('train_targets'):
-      self.train_targets = self.terminals_mask * (
-          gamma * actions_mask * target_qs + actions_mask * self.rewards
-          ) + masked_online_qs
+      self.delta = self.terminals_mask * (
+          gamma * max_q_t_1 + self.rewards
+          ) - masked_online_qs
 
     with tf.variable_scope('main_loss'):
-      self.loss = tf.nn.l2_loss(online_qs - self.train_targets, name='loss')
+      self.loss = tf.reduce_mean(tf.square(self.delta), name='loss')
 
     self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
                                                momentum=momentum)
