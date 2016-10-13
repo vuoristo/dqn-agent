@@ -11,12 +11,12 @@ from PIL import Image, ImageOps
 
 def weight_variable(name, shape, trainable):
   return tf.get_variable(name,
-      shape=shape, initializer=tf.truncated_normal_initializer(stddev=0.001),
+      shape=shape, initializer=tf.truncated_normal_initializer(stddev=0.02),
       trainable=trainable)
 
 def bias_variable(name, shape, trainable):
   return tf.get_variable(name,
-      shape=shape, initializer=tf.constant_initializer(value=0.01),
+      shape=shape, initializer=tf.constant_initializer(value=0.02),
       trainable=trainable)
 
 def conv2d(x,W,strides):
