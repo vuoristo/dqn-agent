@@ -73,7 +73,8 @@ class DQNModel(object):
       self.loss = tf.reduce_mean(tf.square(self.delta), name='loss')
 
     self.optimizer = tf.train.RMSPropOptimizer(learning_rate,
-                                               momentum=momentum)
+                                               momentum=momentum,
+                                               epsilon=0.01)
     self.train = self.optimizer.minimize(self.loss)
 
     # The target model is updated towards the online model in either
