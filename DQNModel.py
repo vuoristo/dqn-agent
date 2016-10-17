@@ -8,7 +8,7 @@ class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
       soft_updates=True, steps_to_hard_update=10000, train_dir='train',
-      collect_summaries=True):
+      collect_summaries=True, clip_delta=1.0):
     """
     arguments:
     env -- OpenAI gym environment
@@ -33,6 +33,7 @@ class DQNModel(object):
     self.steps_to_hard_update = steps_to_hard_update
     self.total_steps = 0
     self.collect_summaries = collect_summaries
+    self.clip_delta = clip_delta
 
     with tf.variable_scope('inputs'):
       self.first_observation = tf.placeholder(
@@ -68,6 +69,10 @@ class DQNModel(object):
       self.delta = self.terminals_mask * (
           gamma * max_q_t_1 + self.rewards
           ) - masked_online_qs
+
+      if self.clip_delta:
+        tf.clip_by_value(self.delta, -self.clip_delta, self.clip_delta,
+            name='clipped_delta')
 
     with tf.variable_scope('main_loss'):
       self.loss = tf.reduce_mean(tf.square(self.delta), name='loss')
