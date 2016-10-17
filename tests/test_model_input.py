@@ -43,7 +43,5 @@ class ModelInputTestCase(unittest.TestCase):
     self.assertEqual(o_qs.get_shape().as_list(), [None, 6])
     self.assertEqual(t_qs.get_shape().as_list(), [None, 6])
 
-    self.assertEqual(model.train_targets.get_shape().as_list(), [None, 6])
-
     W_conv1 = model.online_model['shared_vars']['W_conv1']
     self.assertEqual(W_conv1.get_shape().as_list(), [8, 8, 4, 32])
