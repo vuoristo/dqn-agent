@@ -8,7 +8,8 @@ class DQNAgent(object):
   def __init__(self, env, model, max_episodes=200000, max_steps=1000000,
                exp_buffer_size=40000, epsilon=0.9, linear_epsilon_decay=True,
                epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
-               min_epsilon=0.01, batch_size=20, render=True, warmup_steps=5e4):
+               min_epsilon=0.01, batch_size=20, render=True, warmup_steps=5e4,
+               update_freq=1):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -43,6 +44,7 @@ class DQNAgent(object):
     self.linear_epsilon_decay = linear_epsilon_decay
     self.epsilon_decay_steps = epsilon_decay_steps
     self.exponential_epsilon_decay = exponential_epsilon_decay
+    self.update_freq = update_freq
 
     self.reward_log = deque(100*[0], 100)
     self.window_size = model.window_size
@@ -88,7 +90,8 @@ class DQNAgent(object):
         if total_steps > self.warmup_steps:
           self.warmup = False
         if not self.warmup:
-          self.train_model()
+          if total_steps % self.update_freq == 0:
+            self.train_model()
           if self.eps > self.min_epsilon:
             if self.linear_epsilon_decay:
               self.eps -= (1. - self.min_epsilon) / self.epsilon_decay_steps
