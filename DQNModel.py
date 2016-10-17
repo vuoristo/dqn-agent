@@ -61,7 +61,8 @@ class DQNModel(object):
       actions_mask = tf.one_hot(self.actions, self.num_actions,
                                 name='actions_mask')
       actions_mask = tf.reshape(actions_mask, (-1, self.num_actions))
-      masked_online_qs = tf.reduce_sum(actions_mask*online_qs, reduction_indices=1)
+      masked_online_qs = tf.reduce_sum(actions_mask*online_qs,
+          reduction_indices=1)
       masked_online_qs = tf.reshape(masked_online_qs, (-1, 1))
       max_q_t_1 = tf.reduce_max(target_qs, reduction_indices=1)
       max_q_t_1 = tf.reshape(max_q_t_1, (-1, 1))
