@@ -9,7 +9,7 @@ class DQNAgent(object):
                exp_buffer_size=40000, epsilon=0.9, linear_epsilon_decay=True,
                epsilon_decay_steps=1.e6, exponential_epsilon_decay=0.99,
                min_epsilon=0.01, batch_size=20, render=True, warmup_steps=5e4,
-               update_freq=1):
+               update_freq=1, random_starts=1):
     """Deep Q-learning agent for OpenAI gym. Currently supports only
     one dimensional input.
 
@@ -55,6 +55,7 @@ class DQNAgent(object):
 
     self.warmup_steps = warmup_steps
     self.warmup = True
+    self.random_starts = random_starts
 
     self.render = render
 
@@ -66,7 +67,7 @@ class DQNAgent(object):
     for ep in range(self.max_episodes):
       step = 0
       rewards = 0
-      first_observation = self.env.reset()
+      first_observation = self.new_random_game()
       # recent_observations are episode specific
       self.recent_observations = deque(maxlen=self.window_size)
       self.append_to_recent_observations(first_observation)
@@ -100,6 +101,14 @@ class DQNAgent(object):
         if done:
           self.report(total_steps, step, rewards, ep)
           break
+
+  def new_random_game(self):
+    ob = self.env.reset()
+    no_rnd = np.random.randint(0, self.random_starts)
+    for i in range(no_rnd):
+      ob, _, _, _ = self.env.step(0)
+
+    return ob
 
   def select_action(self):
     """Selects action for given observation."""
