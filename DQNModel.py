@@ -7,8 +7,8 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      soft_updates=True, steps_to_hard_update=10000, train_dir='train',
-      collect_summaries=True, clip_delta=1.0):
+      clip_delta=1.0, soft_updates=True, steps_to_hard_update=10000,
+      weights_to_load=None, train_dir='train', collect_summaries=True):
     """
     arguments:
     env -- OpenAI gym environment
@@ -18,9 +18,11 @@ class DQNModel(object):
     momentum -- RMSProp momentum
     gamma -- Q-learning gamma. default 0.99
     tau -- Soft target update rate. default 0.01
+    clip_delta -- Limit abs(delta) to clip_delta value. default 1.0
     soft_updates -- soft target updates. default True
     steps_to_hard_update -- number of steps between hard updates.
                             default 10000
+    weights_to_load -- Path to pretrained weights. default None
     train_dir -- directory where summaries and variables are saved.
                  default train
     collect_summaries -- toggle summary collection. default True
@@ -92,7 +94,6 @@ class DQNModel(object):
       else:
         self.target_updates = self.get_hard_updates()
 
-    init = tf.initialize_all_variables()
 
     self.saver = tf.train.Saver(tf.all_variables())
 
@@ -102,7 +103,11 @@ class DQNModel(object):
 
     self.sess = tf.Session()
     self.summary_writer = tf.train.SummaryWriter(train_dir, self.sess.graph)
-    self.sess.run(init)
+    if weights_to_load is None:
+      init = tf.initialize_all_variables()
+      self.sess.run(init)
+    else:
+      restore = self.saver.restore(self.sess, weights_to_load)
 
   def get_hard_updates(self):
     """Builds operations for assigning online model weights to

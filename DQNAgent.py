@@ -102,6 +102,42 @@ class DQNAgent(object):
           self.report(total_steps, step, rewards, ep)
           break
 
+  def evaluate(self):
+    """ Evaluate the agent. Runs the environment exactly like in
+    training, but no model training is conducted.
+    """
+    self.warmup = False
+    self.eps = 0
+    total_steps = 0
+    for ep in range(self.max_episodes):
+      step = 0
+      rewards = 0
+      first_observation = self.new_random_game()
+      # recent_observations are episode specific
+      self.recent_observations = deque(maxlen=self.window_size)
+      self.append_to_recent_observations(first_observation)
+      while step < self.max_steps:
+        # select action according to the recent_observations
+        action = self.select_action()
+        second_observation, reward, done, _ = self.env.step(action)
+
+        # observations are saved with the same index as the
+        # action, reward and done following them
+        self.append_to_recent_observations(second_observation)
+        first_observation = second_observation
+
+        rewards += reward
+        step += 1
+        total_steps += 1
+
+        if self.render:
+          self.env.render()
+        if total_steps > self.warmup_steps:
+          self.warmup = False
+        if done:
+          self.report(total_steps, step, rewards, ep)
+          break
+
   def new_random_game(self):
     ob = self.env.reset()
     no_rnd = np.random.randint(0, self.random_starts)
