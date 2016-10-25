@@ -1,6 +1,8 @@
 dqn-agent
 =========
 
+![Agent playing Breakout](/images/breakout.gif?raw=true)
+
 Requirements
 ------------
 * pip
@@ -15,32 +17,34 @@ Installation
 * Clone this repository
 * Create new virtualenv environment
 * For GPU enabled version of tensorflow, check installation instructions on the tensorflow [site](https://www.tensorflow.org/versions/r0.11/get_started/os_setup.html)
-* Install requirements with `pip install -r requirements.txt`
+* For Mac: Install requirements with `pip install -r requirements.txt`
+* For other OSs edit requirements.txt with correct tensorflow version
 
 Training the AtariAgent
 -----------------------
 * Train the model with `python AtariAgent.py`
+* You can select the environment with `--env <ENV_NAME>`
+* Enable rendering with `--render`
 
 Evaluating the AtariAgent
 -------------------------
-* Coming soon
+* Evaluate agent using `python AtariAgent.py --evaluate`
+* Load trained weights with `--load_weights <PATH_TO_WEIGHTS>`
 
 Description
 -----------
+In the animation at the top of the page the Agent is playing breakout after ~10M frames, which corresponds to ~30 hours of training on Geforce GTX 770.
+
 dqn-agent is a [TensorFlow](https://www.tensorflow.org/) implementation of a reinforcement learning agent using [Deep Q Network (DQN)](https://arxiv.org/abs/1312.5602) for [OpenAI Gym](https://gym.openai.com/) environments. The agent learns to play Atari games in the OpenAI Gym Atari environment by repeatedly playing the games and learning to approximate which action (a press of a controller button) gives the most reward in the future. The future reward is approximated using a DQN.
 
-DQN is a multi-layered neural network mapping the game states to expected future rewards. The inputs to the network are screenshots from the game environment. The Atari games have sprites moving across the screen at high speeds so a single screenshot from the environment does not necessarily represent the state of the game accurately (a screenshot of a rolling ball looks the same regardless of the rolling direction). Therefore the network is fed a number of consecutive frames at every timestep to help it distinguish between different movement directions. The output of the network is a vector of values approximating the expected reward of each available action.
+Max Q value                                                 |  Loss
+:----------------------------------------------------------:|:-------------------------------------------------:
+![Max Q value during training](/images/max_q.png?raw=true)  | ![Loss during training](/images/loss.png?raw=true)
 
-Training the agent is computationally demanding. The experiments in the paper are run for 10M or 50M frames. The dqn-agent is currently capable of processing ~30k frames per hour on a GeForce 650m, which means reproducing the smaller experiments (10M frames) takes roughly 2 weeks.
+The maximum Q value during training and associated loss are displayed in the graphs above.
 
 Known differences to the DQN paper
 ----------------------------------
 * The OpenAI Gym Atari environment samples a frame from the game every k frames where k is uniformly sampled from {2,3,4}. In the DQN paper k is fixed.
 * In the DQN paper the input pixels are maximum of pixels in two consecutive frames to compensate for sprites only visible every other frame. In dqn-agent the input frames are used as is without applying max to them.
-
-Todos, missing features
------------------------
-* Loading and evaluating pretrained networks.
-* OpenAI Gym writeup support and demonstrations of fully trained networks should be added.
-* Some naming of parameters and other slight style issues.
-* More thorough testing
+* In the Breakout-v0 environment dqn-agent achieves average reward of 75 over 100 episodes, whereas the DQN agent in the paper achieves avg reward of over 165. This could be due to differences in the game environment or due to some implementation difference.
