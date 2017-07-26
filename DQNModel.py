@@ -7,7 +7,7 @@ import numpy as np
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
-      clip_delta=1.0, soft_updates=True, steps_to_hard_update=10000,
+      huber_loss=True, soft_updates=True, steps_to_hard_update=10000,
       weights_to_load=None, train_dir='train', collect_summaries=True):
     """
     arguments:
@@ -18,7 +18,7 @@ class DQNModel(object):
     momentum -- RMSProp momentum
     gamma -- Q-learning gamma. default 0.99
     tau -- Soft target update rate. default 0.01
-    clip_delta -- Limit abs(delta) to clip_delta value. default 1.0
+    huber_loss -- Use Huber loss. default True
     soft_updates -- soft target updates. default True
     steps_to_hard_update -- number of steps between hard updates.
                             default 10000
@@ -35,7 +35,7 @@ class DQNModel(object):
     self.steps_to_hard_update = steps_to_hard_update
     self.total_steps = 0
     self.collect_summaries = collect_summaries
-    self.clip_delta = clip_delta
+    self.huber_loss = huber_loss
 
     with tf.variable_scope('inputs'):
       self.first_observation = tf.placeholder(
@@ -73,9 +73,9 @@ class DQNModel(object):
           gamma * max_q_t_1 + self.rewards
           ) - masked_online_qs
 
-      if self.clip_delta:
-        tf.clip_by_value(self.delta, -self.clip_delta, self.clip_delta,
-            name='clipped_delta')
+    if self.huber_loss:
+      self.delta = tf.select(tf.abs(self.delta) < 1.0, 0.5 *
+          tf.square(self.delta), tf.abs(self.delta) - 0.5)
 
     with tf.variable_scope('main_loss'):
       self.loss = tf.reduce_mean(tf.square(self.delta), name='loss')
