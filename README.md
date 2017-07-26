@@ -39,7 +39,7 @@ In the animation at the top of the page the Agent is playing breakout after ~10M
 dqn-agent is a [TensorFlow](https://www.tensorflow.org/) implementation of a reinforcement learning agent using [Deep Q Network (DQN)](https://arxiv.org/abs/1312.5602) for [OpenAI Gym](https://gym.openai.com/) environments. The agent learns to play Atari games in the OpenAI Gym Atari environment by repeatedly playing the games and learning to approximate which action (a press of a controller button) gives the most reward in the future. The future reward is approximated using a DQN.
 
 ![Max Q value during training](/images/pong_scores.png?raw=true)
-Smoothed PongDeterministic-v4 score over 4M frames.
+Smoothed PongDeterministic-v4 score over 4M frames. Note that the agent plays Pong with perfect score after this training after epsilon is set to 0.
 
 Known differences to the DQN paper
 ----------------------------------
