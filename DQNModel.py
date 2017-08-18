@@ -4,6 +4,10 @@ with DQNAgent.
 import tensorflow as tf
 import numpy as np
 
+#Tf 1.x support:
+import distutils.version
+use_tf100_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('1.0.0')
+
 class DQNModel(object):
   def __init__(
       self, env, learning_rate=2.5e-4, momentum=0.95, gamma=0.99, tau=0.01,
@@ -74,7 +78,11 @@ class DQNModel(object):
           ) - masked_online_qs
 
     if self.huber_loss:
-      self.delta = tf.select(tf.abs(self.delta) < 1.0, 0.5 *
+      if use_tf100_api:
+        self.delta = tf.where(tf.abs(self.delta) < 1.0, 0.5 *
+          tf.square(self.delta), tf.abs(self.delta) - 0.5)
+      else:
+        self.delta = tf.select(tf.abs(self.delta) < 1.0, 0.5 *
           tf.square(self.delta), tf.abs(self.delta) - 0.5)
 
     with tf.variable_scope('main_loss'):
@@ -97,12 +105,20 @@ class DQNModel(object):
 
     self.saver = tf.train.Saver(tf.all_variables())
 
-    loss_summary = tf.scalar_summary('loss', self.loss)
-    q_summary = tf.scalar_summary('max_q', tf.reduce_max(online_qs))
-    self.summary_op = tf.merge_all_summaries()
+    if use_tf100_api:
+      loss_summary = tf.summary.scalar('loss', self.loss)
+      q_summary = tf.summary.scalar('max_q', tf.reduce_max(online_qs))
+      self.summary_op = tf.summary.merge_all()
+    else:
+      loss_summary = tf.scalar_summary('loss', self.loss)
+      q_summary = tf.scalar_summary('max_q', tf.reduce_max(online_qs))
+      self.summary_op = tf.merge_all_summaries()
 
     self.sess = tf.Session()
-    self.summary_writer = tf.train.SummaryWriter(train_dir, self.sess.graph)
+    if use_tf100_api:
+      self.summary_writer = tf.summary.FileWriter(train_dir, self.sess.graph)
+    else:
+      self.summary_writer = tf.train.SummaryWriter(train_dir, self.sess.graph)
     if weights_to_load is None:
       init = tf.initialize_all_variables()
       self.sess.run(init)
